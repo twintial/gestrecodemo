@@ -8,9 +8,8 @@ CHUNK = 2048  # audio frame length
 STEP = 700
 
 
-def generate_training_data():
-    file_name = r'1.wav'
-    wf = wave.open(file_name, 'rb')
+def generate_training_data(audio_file, dataset_file):
+    wf = wave.open(audio_file, 'rb')
     nchannels = wf.getnchannels()  # 声道数
     fs = wf.getframerate()  # 采样率
     # 开始处理数据
@@ -22,7 +21,7 @@ def generate_training_data():
         data = np.frombuffer(str_data, dtype=get_dtype_from_width(wf.getsampwidth()))
         data = data.reshape((-1, nchannels))
         data = data.T  # shape = (num_of_channels, CHUNK)
-        # 处理数据,这里可以优化
+        # 处理数据，这里可以优化，还需要验证其正确性
         f = 17350
         for i in range(8):
             f = f + i * STEP
@@ -33,7 +32,7 @@ def generate_training_data():
         merged_u_p = np.hstack(([u_p for u_p in unwrapped_phase_list]))
         # 压缩便于保存
         flattened_m_u_p = merged_u_p.flatten()
-        with open('t.txt', 'ab') as f:
+        with open(dataset_file, 'ab') as f:
             np.savetxt(f, flattened_m_u_p.reshape(1, -1))
         # 输出时间，并读取下一段数据
         t = t + CHUNK / fs
@@ -42,7 +41,7 @@ def generate_training_data():
 
 
 if __name__ == '__main__':
-    # generate_training_data()
+    generate_training_data(r'1.wav', r't.txt')
     # a = np.array([[[1, 2, 3], [4, 5, 6]], [[1, 2, 3], [4, 5, 6]]])
     # print(a)
     # # x = np.hstack(([u_p for u_p in a]))
@@ -52,5 +51,4 @@ if __name__ == '__main__':
     # print(z)
     # with open('t.txt', 'ab') as f:
     #     np.savetxt(f, z.reshape(1, -1))
-    d = np.loadtxt('t.txt')
-    pass
+    # d = np.loadtxt('t.txt')

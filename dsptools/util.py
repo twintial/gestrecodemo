@@ -17,6 +17,7 @@ def get_cos_IQ(data: np.ndarray, f, fs=48e3) -> (np.ndarray, np.ndarray):
     I_raw = np.cos(2 * np.pi * f * times) * data
     Q_raw = -np.sin(2 * np.pi * f * times) * data
     # 低通滤波
+    # 这里的axis要看一下对不对
     I = butter_lowpass_filter(I_raw, 200)
     Q = butter_lowpass_filter(Q_raw, 200)
     return I, Q
@@ -25,5 +26,6 @@ def get_cos_IQ(data: np.ndarray, f, fs=48e3) -> (np.ndarray, np.ndarray):
 def get_phase(I: np.ndarray, Q: np.ndarray) -> np.ndarray:
     signal = I + 1j * Q
     angle = np.angle(signal)
+    # 这里的axis要看一下对不对
     unwrap_angle = np.unwrap(angle)
     return unwrap_angle
