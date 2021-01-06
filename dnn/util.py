@@ -101,8 +101,8 @@ def generate_training_data_pcm(audio_file, dataset_save_file):
             continue
         unwrapped_phase_list = []
         data = data.reshape((-1, nchannels))
-        data = data.T  # shape = (num_of_channels, CHUNK)
-        if data.shape[1] < CHUNK:
+        data = data.T  # shape = (num_of_channels, 2 * CHUNK)
+        if data.shape[1] < 2 * CHUNK:
             continue
         # 处理数据，这里可以优化，还需要验证其正确性
         for i in range(NUM_OF_FREQ):

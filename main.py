@@ -10,7 +10,7 @@ def test():
         os.remove(r't.txt')
     except:
         pass
-    generate_training_data_pcm(r'D:\projects\pyprojects\andriodfaceidproject\temp\word1\shenjunjie\1.pcm', r't.txt')
+    generate_training_data_pcm(r'D:\projects\pyprojects\andriodfaceidproject\temp\word1\shenjunjie\148.pcm', r't.txt')
     # a = np.array([[[1, 2, 3], [4, 5, 6]], [[1, 2, 3], [4, 5, 6]]])
     # print(a)
     # # x = np.hstack(([u_p for u_p in a]))
@@ -35,5 +35,7 @@ def generate_training_dataset():
 
 
 if __name__ == '__main__':
-    test()
-    # generate_training_dataset()
+    # test()
+    generate_training_dataset()
+    d = np.loadtxt('dataset/14.txt')
+    print(d.shape)
