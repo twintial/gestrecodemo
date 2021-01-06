@@ -35,7 +35,7 @@ def generate_training_dataset():
 
 
 if __name__ == '__main__':
-    # test()
-    generate_training_dataset()
-    d = np.loadtxt('dataset/14.txt')
-    print(d.shape)
+    test()
+    # generate_training_dataset()
+    # d = np.loadtxt('dataset/14.txt')
+    # print(d.shape)

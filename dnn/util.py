@@ -7,6 +7,8 @@ from dsptools.util import get_cos_IQ, get_phase
 import re
 import os
 import matplotlib.pyplot as plt
+import keras
+from sklearn.model_selection import train_test_split
 
 
 CHUNK = 2048  # audio frame length
@@ -147,6 +149,35 @@ def load_dataset(dataset_dir):
     print(x_dataset.shape)
     print(y_dataset.shape)
     return x_dataset, y_dataset
+
+
+def load_dataset_v2(dataset_dir, num_classes):
+    file_names = os.listdir(dataset_dir)
+    x_train_list = []
+    y_train_list = []
+    x_test_list = []
+    y_test_list = []
+    for file_name in file_names:
+        m = re.match(r'(\d+).txt', file_name)
+        if m:
+            label = m.group(1)
+            flattened_m_u_p = np.loadtxt(os.path.join(dataset_dir, file_name))
+            merged_u_p = flattened_m_u_p.reshape((flattened_m_u_p.shape[0], NUM_OF_FREQ, -1, 1))
+            print(merged_u_p.shape)
+            y_all = merged_u_p.shape[0]*[int(label)]
+            y_all = keras.utils.to_categorical(y_all, num_classes)
+            x_train_i, x_test_i, y_train_i, y_test_i = train_test_split(merged_u_p, y_all, train_size=0.8)
+            x_train_list.append(x_train_i)
+            x_test_list.append(x_test_i)
+            y_train_list.append(y_train_i)
+            y_test_list.append(y_test_i)
+    x_train = np.concatenate(([x_tr for x_tr in x_train_list]), axis=0)
+    x_test = np.concatenate(([x_te for x_te in x_test_list]), axis=0)
+    y_train = np.concatenate(([y_tr for y_tr in y_train_list]), axis=0)
+    y_test = np.concatenate(([y_te for y_te in y_test_list]), axis=0)
+
+    shuffled_indices = np.random.permutation(x_train.shape[0])
+    return x_train[shuffled_indices], x_test, y_train[shuffled_indices], y_test
 
 
 # load_dataset('../dataset')
