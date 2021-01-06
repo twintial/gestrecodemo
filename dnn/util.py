@@ -138,7 +138,7 @@ def load_dataset(dataset_dir):
         if m:
             label = m.group(1)
             flattened_m_u_p = np.loadtxt(os.path.join(dataset_dir, file_name))
-            merged_u_p = flattened_m_u_p.reshape((flattened_m_u_p.shape[0], NUM_OF_FREQ, -1))
+            merged_u_p = flattened_m_u_p.reshape((flattened_m_u_p.shape[0], NUM_OF_FREQ, -1, 1))
             print(merged_u_p.shape)
             x_dataset_list.append(merged_u_p)
             y_dataset_list.append(merged_u_p.shape[0]*[int(label)])
