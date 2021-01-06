@@ -1,4 +1,4 @@
-from util import generate_training_data_pcm
+from dnn.util import generate_training_data_pcm
 import numpy as np
 import os
 import re
@@ -21,7 +21,7 @@ def test():
     d = np.loadtxt('t.txt')
     print(d.shape)
 
-def main():
+def generate_training_dataset():
     audio_dir = r'D:\projects\pyprojects\andriodfaceidproject\temp\word1\shenjunjie'
     audio_file_names = os.listdir(audio_dir)
     for audio_file_name in audio_file_names:
@@ -35,5 +35,5 @@ def main():
 
 
 if __name__ == '__main__':
-    # test()
-    main()
+    test()
+    # generate_training_dataset()

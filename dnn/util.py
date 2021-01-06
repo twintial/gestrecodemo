@@ -4,6 +4,8 @@ import numpy as np
 from audiotools.util import get_dtype_from_width, load_audio_data
 from dsptools.filter import butter_bandpass_filter
 from dsptools.util import get_cos_IQ, get_phase
+import re
+import os
 import matplotlib.pyplot as plt
 
 
@@ -12,6 +14,24 @@ STEP = 700  # 每个频率的跨度
 NUM_OF_FREQ = 8  # 频率数量
 DELAY_TIME = 1  # 麦克风的延迟时间
 STD_THRESHOLD = 0.022  # 相位标准差阈值
+
+
+def print_history(history):
+    plt.plot(history['acc'])
+    plt.plot(history['val_acc'])
+    plt.title('Model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
+
+    plt.plot(history['loss'])
+    plt.plot(history['val_loss'])
+    plt.title('Model Loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
 
 
 def generate_training_data(audio_file, dataset_save_file):
@@ -107,3 +127,34 @@ def generate_training_data_pcm(audio_file, dataset_save_file):
         flattened_m_u_p = merged_u_p.flatten()
         with open(dataset_save_file, 'ab') as f:
             np.savetxt(f, flattened_m_u_p.reshape(1, -1))
+
+
+def load_dataset(dataset_dir):
+    file_names = os.listdir(dataset_dir)
+    x_dataset_list = []
+    y_dataset_list = []
+    for file_name in file_names:
+        m = re.match(r'(\d+).txt', file_name)
+        if m:
+            label = m.group(1)
+            flattened_m_u_p = np.loadtxt(os.path.join(dataset_dir, file_name))
+            merged_u_p = flattened_m_u_p.reshape((flattened_m_u_p.shape[0], NUM_OF_FREQ, -1))
+            print(merged_u_p.shape)
+            x_dataset_list.append(merged_u_p)
+            y_dataset_list.append(merged_u_p.shape[0]*[int(label)])
+    x_dataset = np.concatenate(([x for x in x_dataset_list]), axis=0)
+    y_dataset = np.concatenate(([y for y in y_dataset_list]), axis=0)
+    print(x_dataset.shape)
+    print(y_dataset.shape)
+    return x_dataset, y_dataset
+
+
+# load_dataset('../dataset')
+
+# a = np.random.randint(1, 10, size=(3,4,5))
+# print(a)
+# b = a.reshape((3, -1))
+# print(b)
+# c = b.reshape((b.shape[0], 4, -1))
+# print(c)
+# print(np.all(a==c))
