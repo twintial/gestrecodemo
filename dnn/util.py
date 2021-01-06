@@ -91,9 +91,9 @@ def generate_training_data_pcm(audio_file, dataset_save_file):
     # 开始处理数据
     t = 0
     f0 = 17350
-    for win in range(0, len(origin_data), CHUNK):
+    for win in range(CHUNK, len(origin_data), CHUNK):
         # 读取下一段数据
-        data = origin_data[win:win+CHUNK]
+        data = origin_data[win-CHUNK:win+CHUNK]
         t = t + CHUNK / fs
         # print(f"time:{t}s")
         # 由于麦克风的原因只看2s之后的
