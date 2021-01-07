@@ -1,21 +1,71 @@
 from keras.models import Sequential
-from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, AveragePooling2D
+from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, AveragePooling2D, BatchNormalization, ReLU, Dropout
 from sklearn.model_selection import train_test_split
 import keras
 
-from dnn.util import print_history
+from dnn.datapreprocess import print_history
 
 
 def cons_model(input_shape, num_classes):
+    # model = Sequential()
+    # model.add(Conv2D(32, kernel_size=(1, 5), strides=(1, 1), activation='relu', input_shape=input_shape))
+    # model.add(AveragePooling2D(pool_size=(2, 2)))
+    # model.add(Conv2D(64, (1, 5), activation='relu'))
+    # model.add(AveragePooling2D(pool_size=(2, 2)))
+    # model.add(Conv2D(128, (1, 5), activation='relu'))
+    # model.add(Flatten())
+    # model.add(Dense(120, activation='relu'))
+    # model.add(Dense(84, activation='relu'))
+    # model.add(Dense(num_classes, activation='softmax'))
+    #
+    # model.compile(loss=keras.losses.categorical_crossentropy,
+    #               optimizer=keras.optimizers.Adam(),
+    #               metrics=['acc'])
     model = Sequential()
-    model.add(Conv2D(32, kernel_size=(1, 49), strides=(1, 1), activation='relu', input_shape=input_shape))
-    model.add(AveragePooling2D(pool_size=(2, 4)))
-    model.add(Conv2D(64, (1, 5), activation='relu'))
-    model.add(AveragePooling2D(pool_size=(2, 4)))
-    model.add(Conv2D(128, (1, 5), activation='relu'))
+    model.add(Conv2D(8,
+                     kernel_size=(3, 8),
+                     strides=(1, 1),
+                     input_shape=input_shape,
+                     bias_initializer=keras.initializers.Constant(value=0.1)))
+    model.add(BatchNormalization())
+    model.add(ReLU())
+    model.add(MaxPooling2D(pool_size=(1, 3), strides=(1, 3), padding='same'))
+
+    model.add(Conv2D(16,
+                     kernel_size=(3, 8),
+                     strides=(1, 1),
+                     bias_initializer=keras.initializers.Constant(value=0.1)))
+    model.add(BatchNormalization())
+    model.add(ReLU())
+    model.add(MaxPooling2D(pool_size=(1, 4), strides=(1, 4), padding='same'))
+
+    model.add(Conv2D(32,
+                     kernel_size=(3, 5),
+                     strides=(1, 1),
+                     bias_initializer=keras.initializers.Constant(value=0.1)))
+    model.add(BatchNormalization(trainable=True, scale=True))
+    model.add(ReLU())
+    model.add(MaxPooling2D(pool_size=(2, 3), strides=(2, 3), padding='same'))
+
+    model.add(Conv2D(32,
+                     kernel_size=(3, 3),
+                     strides=(1, 1),
+                     bias_initializer=keras.initializers.Constant(value=0.1)))
+    model.add(BatchNormalization(trainable=True, scale=True))
+    model.add(ReLU())
+    model.add(MaxPooling2D(pool_size=(1, 3), strides=(1, 3), padding='same'))
+
+    model.add(Conv2D(32,
+                     kernel_size=(3, 3),
+                     strides=(1, 1),
+                     bias_initializer=keras.initializers.Constant(value=0.1)))
+    model.add(BatchNormalization(trainable=True, scale=True))
+    model.add(ReLU())
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'))
+
     model.add(Flatten())
-    model.add(Dense(120, activation='relu'))
-    model.add(Dense(84, activation='relu'))
+    model.add(Dense(128, activation='relu', bias_initializer=keras.initializers.Constant(value=0.1)))
+    model.add(Dropout(0.6))
     model.add(Dense(num_classes, activation='softmax'))
 
     model.compile(loss=keras.losses.categorical_crossentropy,

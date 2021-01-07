@@ -23,10 +23,18 @@ def get_cos_IQ(data: np.ndarray, f, fs=48e3) -> (np.ndarray, np.ndarray):
     return I, Q
 
 
+def get_cos_IQ_raw(data: np.ndarray, f, fs=48e3) -> (np.ndarray, np.ndarray):
+    frames = data.shape[1]
+    times = np.arange(0, frames) * 1 / fs
+    I_raw = np.cos(2 * np.pi * f * times) * data
+    Q_raw = -np.sin(2 * np.pi * f * times) * data
+    return I_raw, Q_raw
+
+
 def get_phase(I: np.ndarray, Q: np.ndarray) -> np.ndarray:
     signal = I + 1j * Q
     angle = np.angle(signal)
-    angle = angle[:, 2048:]  # 这里存在问题，减少了信息量
+    # angle = angle[:, 2048:]  # 这里存在问题，减少了信息量
     # 这里的axis要看一下对不对
     unwrap_angle = np.unwrap(angle)
     return unwrap_angle

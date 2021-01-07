@@ -9,3 +9,4 @@ dist
 dataset
 t
 *.h5
+*.npz
