@@ -2,6 +2,8 @@ from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, AveragePooling2D, BatchNormalization, ReLU, Dropout
 from sklearn.model_selection import train_test_split
 import keras
+import numpy as np
+import pandas as pd
 
 from dnn.datapreprocess import print_history
 
@@ -65,7 +67,7 @@ def cons_model(input_shape, num_classes):
 
     model.add(Flatten())
     model.add(Dense(128, activation='relu', bias_initializer=keras.initializers.Constant(value=0.1)))
-    model.add(Dropout(0.6))
+    model.add(Dropout(0.4))  # 0.4不错
     model.add(Dense(num_classes, activation='softmax'))
 
     model.compile(loss=keras.losses.categorical_crossentropy,
@@ -89,6 +91,9 @@ def train_model(model: Sequential, x, y, batch_size=32, epochs=100, save_path=No
 
 
 def train_model_v2(model: Sequential, x_train, x_test, y_train, y_test, batch_size=32, epochs=100, save_path=None):
+    my_callbacks = [
+        keras.callbacks.EarlyStopping(monitor='val_acc', baseline=0.85),
+    ]
     result = model.fit(x_train,
                        y_train,
                        batch_size=batch_size,
@@ -99,3 +104,19 @@ def train_model_v2(model: Sequential, x_train, x_test, y_train, y_test, batch_si
         model.save(save_path)
     print_history(result.history)
     return result
+
+
+def val_model(model: Sequential, x_test, y_test, nclasses):
+    analyze_mat = np.zeros((nclasses, nclasses))
+    y_predict = model.predict(x_test)
+    for i in range(y_predict.shape[0]):
+        predict_class = np.argmax(y_predict[i])
+        real_class = np.argmax(y_test[i])
+        analyze_mat[real_class][predict_class] = analyze_mat[real_class][predict_class] + 1
+    analyze_mat = analyze_mat / np.sum(analyze_mat, axis=1)
+    print(analyze_mat)
+    p = pd.DataFrame(analyze_mat)
+    p.columns = ['握紧', '张开','左滑','右滑','上滑','下滑','前推','后推','顺时针转圈','逆时针转圈']
+    p.index = ['握紧', '张开','左滑','右滑','上滑','下滑','前推','后推','顺时针转圈','逆时针转圈']
+    p.to_csv('val.csv')
+    return analyze_mat

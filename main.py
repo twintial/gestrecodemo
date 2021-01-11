@@ -22,8 +22,7 @@ def test():
     d = np.loadtxt('t.txt')
     print(d.shape)
 
-def generate_training_dataset():
-    audio_dir = r'D:\projects\pyprojects\andriodfaceidproject\temp\word1\shenjunjie'
+def generate_training_dataset(audio_dir, offset):
     audio_file_names = os.listdir(audio_dir)
     for audio_file_name in audio_file_names:
         m = re.match(r'(\d*)\.pcm', audio_file_name)
@@ -31,13 +30,14 @@ def generate_training_dataset():
             code = int(m.group(1))
             label = code // 10
             audio_file = os.path.join(audio_dir, audio_file_name)
-            extract_phasedata_from_audio(audio_file, os.path.join('dataset', 'whole', f'{code}-{label}'))
+            extract_phasedata_from_audio(audio_file, os.path.join('data', 'gesture/origin', f'{code + offset}-{label}'))
 
 
 
 if __name__ == '__main__':
     # test()
-    generate_training_dataset()
-    phasedata_padding_labeling('dataset/whole', 'dataset/whole_dataset/dataset', 1)
+    generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture1\shenjunjie', 0)
+    generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture2\shenjunjie', 10)
+    phasedata_padding_labeling('data/gesture/origin', 'data/gesture/padding/dataset', 1)
     # d = np.loadtxt('dataset/whole/14.txt')
     # print(d.shape)
