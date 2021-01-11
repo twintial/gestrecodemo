@@ -36,3 +36,14 @@ def dataset_split(x: np.ndarray, y: np.ndarray, ratio=0.8):
     test_random = np.random.permutation(x_test.shape[0])
 
     return x_train[train_random], x_test[test_random], y_train[train_random], y_test[test_random]
+
+
+def data_split_and_save(rawdata_path, splitdata_path):
+    dataset = np.load(rawdata_path)
+    x = dataset['x']
+    x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
+    print(x.shape)
+    y = dataset['y']
+    x_train, x_test, y_train, y_test = dataset_split(x, y, ratio=0.8) # 最好保存一下
+    np.savez_compressed(splitdata_path,
+                        x_train=x_train, x_test=x_test, y_train=y_train, y_test=y_test)

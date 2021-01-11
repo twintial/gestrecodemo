@@ -187,7 +187,7 @@ def extract_phasedata_from_audio(audio_file, phasedata_save_file, audio_type='pc
     return nchannels
 
 
-def phasedata_padding_labeling(phasedata_save_dir: str, dataset_save_file, nchannels):
+def phasedata_padding_labeling(phasedata_save_dir: str, dataset_save_file, nchannels, mean_len_method='auto'):
     phasedata_save_file_names = os.listdir(phasedata_save_dir)
     phasedata_list = []
     label_list = []
@@ -208,7 +208,10 @@ def phasedata_padding_labeling(phasedata_save_dir: str, dataset_save_file, nchan
                 raise ValueError('label error')
         else:
             raise ValueError('unsupported file type')
-    mean_len = int(mean_len)
+    if mean_len_method == 'auto':
+        mean_len = int(mean_len)
+    else:
+        mean_len = mean_len_method
     for i in range(len(phasedata_list)):
         detla_len = phasedata_list[i].shape[1] - mean_len
         if detla_len > 0:

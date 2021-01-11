@@ -125,5 +125,5 @@ def val_model(model: Sequential, x_test, y_test, nclasses):
     p = pd.DataFrame(analyze_mat)
     p.columns = ['握紧', '张开','左滑','右滑','上滑','下滑','前推','后推','顺时针转圈','逆时针转圈']
     p.index = ['握紧', '张开','左滑','右滑','上滑','下滑','前推','后推','顺时针转圈','逆时针转圈']
-    p.to_csv('val.csv')
+    p.to_csv('valraw.csv')
     return analyze_mat
