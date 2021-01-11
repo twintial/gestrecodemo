@@ -10,3 +10,4 @@ dataset
 t
 *.h5
 *.npz
+*.csv
