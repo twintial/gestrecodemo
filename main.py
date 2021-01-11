@@ -38,6 +38,8 @@ if __name__ == '__main__':
     # test()
     generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture1\shenjunjie', 0)
     generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture2\shenjunjie', 10)
+    generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture3\shenjunjie', 20)
+    generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture3\shenjunjie', 30)
     phasedata_padding_labeling('data/gesture/origin', 'data/gesture/padding/dataset', 1)
     # d = np.loadtxt('dataset/whole/14.txt')
     # print(d.shape)

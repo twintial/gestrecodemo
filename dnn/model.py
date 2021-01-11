@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 import keras
 import numpy as np
 import pandas as pd
+from tensorflow.python.keras.callbacks import ModelCheckpoint
 
 from dnn.datapreprocess import print_history
 
@@ -91,17 +92,21 @@ def train_model(model: Sequential, x, y, batch_size=32, epochs=100, save_path=No
 
 
 def train_model_v2(model: Sequential, x_train, x_test, y_train, y_test, batch_size=32, epochs=100, save_path=None):
-    my_callbacks = [
-        keras.callbacks.EarlyStopping(monitor='val_acc', baseline=0.85),
-    ]
+    # my_callbacks = [
+    #     keras.callbacks.EarlyStopping(monitor='val_acc', baseline=0.85),
+    # ]
+    # 保存最好模型
+    checkpoint = ModelCheckpoint(save_path, monitor='val_acc', verbose=1, save_best_only=True, mode='max', period=2)
+    callbacks_list = [checkpoint]
     result = model.fit(x_train,
                        y_train,
                        batch_size=batch_size,
                        epochs=epochs,
                        validation_data=(x_test, y_test),
+                       callbacks=callbacks_list,
                        verbose=1)
-    if save_path:
-        model.save(save_path)
+    # if save_path:
+    #     model.save(save_path)
     print_history(result.history)
     return result
 
@@ -115,6 +120,8 @@ def val_model(model: Sequential, x_test, y_test, nclasses):
         analyze_mat[real_class][predict_class] = analyze_mat[real_class][predict_class] + 1
     analyze_mat = analyze_mat / np.sum(analyze_mat, axis=1)
     print(analyze_mat)
+    acc = np.diag(analyze_mat).mean()
+    print(f"acc: {acc}")
     p = pd.DataFrame(analyze_mat)
     p.columns = ['握紧', '张开','左滑','右滑','上滑','下滑','前推','后推','顺时针转圈','逆时针转圈']
     p.index = ['握紧', '张开','左滑','右滑','上滑','下滑','前推','后推','顺时针转圈','逆时针转圈']
