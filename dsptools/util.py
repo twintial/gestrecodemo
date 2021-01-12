@@ -38,3 +38,9 @@ def get_phase(I: np.ndarray, Q: np.ndarray) -> np.ndarray:
     # 这里的axis要看一下对不对
     unwrap_angle = np.unwrap(angle)
     return unwrap_angle
+
+
+def get_magnitude(I: np.ndarray, Q: np.ndarray) -> np.ndarray:
+    signal = I + 1j * Q
+    magn = np.abs(signal)
+    return magn

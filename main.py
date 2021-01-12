@@ -1,4 +1,5 @@
-from dnn.datapreprocess import generate_training_data_pcm, extract_phasedata_from_audio, phasedata_padding_labeling
+from nn.datapreprocess import generate_training_data_pcm, extract_phasedata_from_audio, phasedata_padding_labeling, \
+    extract_magndata_from_audio
 import numpy as np
 import os
 import re
@@ -31,17 +32,18 @@ def generate_training_dataset(audio_dir, rawdata_dir, offset):
             label = code // 10
             audio_file = os.path.join(audio_dir, audio_file_name)
             extract_phasedata_from_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'))
+            # extract_magndata_from_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'))
 
 
 
 if __name__ == '__main__':
     # test()
-    # generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture1\shenjunjie', r'data\gesture\origin', 0)
-    # generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture2\shenjunjie', r'data\gesture\origin', 10)
-    # generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture3\shenjunjie', r'data\gesture\origin', 20)
-    # generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture4\shenjunjie', r'data\gesture\origin', 30)
-    generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture5\shenjunjie',
+    # generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture5\shenjunjie', r'data\gesture\raw', 0)
+    # generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture2\shenjunjie', r'data\gesture\raw', 10)
+    # generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture3\shenjunjie', r'data\gesture\raw', 20)
+    # generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture4\shenjunjie', r'data\gesture\raw', 30)
+    generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture1\shenjunjie',
                               r'data/gesture/valraw', 0)
-    phasedata_padding_labeling('data/gesture/valraw', 'data/gesture/valpadding/dataset', 1)
+    phasedata_padding_labeling('data/gesture/valraw', 'data/gesture/valpadding/dataset_home', 1, 687)
     # d = np.loadtxt('dataset/whole/14.txt')
     # print(d.shape)

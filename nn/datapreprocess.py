@@ -4,7 +4,7 @@ from statsmodels.tsa.seasonal import seasonal_decompose
 
 from audiotools.util import get_dtype_from_width, load_audio_data
 from dsptools.filter import butter_bandpass_filter, move_average_overlap_filter
-from dsptools.util import get_cos_IQ, get_phase, get_cos_IQ_raw
+from dsptools.util import get_cos_IQ, get_phase, get_cos_IQ_raw, get_magnitude
 import re
 import os
 import matplotlib.pyplot as plt
@@ -169,6 +169,60 @@ def extract_phasedata_from_audio(audio_file, phasedata_save_file, audio_type='pc
         trendI = trendI[:, 5:]
 
         unwrapped_phase = get_phase(trendI, trendQ)  # 这里的展开目前没什么效果
+        # plt.plot(unwrapped_phase[0])
+        # plt.show()
+        assert unwrapped_phase.shape[1] > 1
+        # 用diff，和两次diff
+        unwrapped_phase_list.append(np.diff(unwrapped_phase)[:, :-1])
+        # plt.plot(np.diff(unwrapped_phase).reshape(-1))
+        # plt.show()
+        unwrapped_phase_list.append(np.diff(np.diff(unwrapped_phase)))
+    merged_u_p = np.array(unwrapped_phase_list).reshape((NUM_OF_FREQ * nchannels * 2, -1))
+    print(merged_u_p.shape)
+    # 压缩便于保存
+    flattened_m_u_p = merged_u_p.flatten()
+    # 由于长短不一，不能放在一起
+    # np.savetxt(dataset_save_file, flattened_m_u_p.reshape(1, -1))
+    np.savez_compressed(phasedata_save_file, phasedata=flattened_m_u_p)
+    return nchannels
+
+
+def extract_magndata_from_audio(audio_file, phasedata_save_file, audio_type='pcm'):
+    origin_data, fs = load_audio_data(audio_file, audio_type)
+    nchannels = 1  # 声道数
+    fs = fs  # 采样率
+    data = origin_data[int(fs * DELAY_TIME):]
+    data = data.reshape((-1, nchannels))
+    data = data.T  # shape = (num_of_channels, all_frames)
+    # 开始处理数据
+    t = 0
+    f0 = 17350
+    unwrapped_phase_list = []
+    for i in range(NUM_OF_FREQ):
+        fc = f0 + i * STEP
+        data_filter = butter_bandpass_filter(data, fc - 250, fc + 250)
+        I_raw, Q_raw = get_cos_IQ_raw(data_filter, fc, fs)
+        # 滤波+下采样
+        I = move_average_overlap_filter(I_raw)
+        Q = move_average_overlap_filter(Q_raw)
+        # denoise
+        decompositionQ = seasonal_decompose(Q.T, period=5, two_sided=False)
+        trendQ = decompositionQ.trend
+        decompositionI = seasonal_decompose(I.T, period=5, two_sided=False)
+        trendI = decompositionI.trend
+
+        trendQ = trendQ.T
+        trendI = trendI.T
+
+        assert trendI.shape == trendQ.shape
+        if len(trendI.shape) == 1:
+            trendI = trendI.reshape((1, -1))
+            trendQ = trendQ.reshape((1, -1))
+
+        trendQ = trendQ[:, 5:]
+        trendI = trendI[:, 5:]
+
+        unwrapped_phase = get_magnitude(trendI, trendQ)  # 这里的展开目前没什么效果
         # plt.plot(unwrapped_phase[0])
         # plt.show()
         assert unwrapped_phase.shape[1] > 1

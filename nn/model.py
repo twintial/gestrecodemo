@@ -6,10 +6,10 @@ import numpy as np
 import pandas as pd
 from tensorflow.python.keras.callbacks import ModelCheckpoint
 
-from dnn.datapreprocess import print_history
+from nn.datapreprocess import print_history
 
 
-def cons_model(input_shape, num_classes):
+def cons_cnn_model(input_shape, num_classes):
     # model = Sequential()
     # model.add(Conv2D(32, kernel_size=(1, 5), strides=(1, 1), activation='relu', input_shape=input_shape))
     # model.add(AveragePooling2D(pool_size=(2, 2)))
@@ -125,5 +125,5 @@ def val_model(model: Sequential, x_test, y_test, nclasses):
     p = pd.DataFrame(analyze_mat)
     p.columns = ['握紧', '张开','左滑','右滑','上滑','下滑','前推','后推','顺时针转圈','逆时针转圈']
     p.index = ['握紧', '张开','左滑','右滑','上滑','下滑','前推','后推','顺时针转圈','逆时针转圈']
-    p.to_csv('valraw.csv')
+    p.to_csv('val.csv')
     return analyze_mat

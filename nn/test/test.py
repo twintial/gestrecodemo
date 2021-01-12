@@ -5,8 +5,8 @@ from keras.layers import Conv2D, \
 from sklearn.model_selection import train_test_split
 import keras
 
-from dnn.datapreprocess import print_history
-from dnn.test import cnn_input
+from nn.datapreprocess import print_history
+from nn.test import cnn_input
 import numpy as np
 
 

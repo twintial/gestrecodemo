@@ -1,6 +1,6 @@
 import numpy as np
 
-from dnn.test import Utils
+from nn.test import Utils
 
 import os
 import re
