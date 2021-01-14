@@ -3,7 +3,7 @@ from nn.datapreprocess import generate_training_data_pcm, extract_phasedata_from
 import numpy as np
 import os
 import re
-
+from config import *
 
 def test():
     import os
@@ -42,8 +42,10 @@ if __name__ == '__main__':
     # generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture2\shenjunjie', r'data\gesture\raw', 10)
     # generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture3\shenjunjie', r'data\gesture\raw', 20)
     # generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture4\shenjunjie', r'data\gesture\raw', 30)
-    generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture1\shenjunjie',
-                              r'data/gesture/valraw', 0)
-    phasedata_padding_labeling('data/gesture/valraw', 'data/gesture/valpadding/dataset_home', 1, 687)
+    # generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture1\shenjunjie',
+    #                           r'data/gesture/valraw', 0)
+
+    generate_training_dataset(AUDIO_DIR, TRINGING_RAWDATA_DIR, 0)
+    phasedata_padding_labeling(TRINGING_RAWDATA_DIR, TRINGING_PADDING_FILE, 1)
     # d = np.loadtxt('dataset/whole/14.txt')
     # print(d.shape)

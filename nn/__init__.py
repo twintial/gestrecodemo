@@ -7,6 +7,8 @@ import keras
 
 from nn.util import dataset_split, data_split_and_save
 
+from config import *
+
 num_classes = 10
 
 
@@ -63,19 +65,21 @@ def no_window_training_splitdata(splitdata_path, model_path):
     # train_model(model, x, y_onehot, batch_size=1, epochs=20)
 
 
-def analyze(splitdata_path, model_file):
+def analyze(splitdata_path, model_file, csv_file):
     rawdata = np.load(splitdata_path)
     x_test = rawdata['x_test']
     y_test = rawdata['y_test']
     y_test = keras.utils.to_categorical(y_test, num_classes)
     model = models.load_model(model_file)
-    val_model(model, x_test, y_test, num_classes)
+    val_model(model, x_test, y_test, num_classes, csv_file)
 
 
 
 
 
 if __name__ == '__main__':
+    model_file = r'models/2.h5'
+    csv_file = r'val.csv'
     # x, y = load_dataset(r'../dataset')
     # y_onehot = keras.utils.to_categorical(y, num_classes)
     # model = cons_model(x.shape[1:], num_classes)
@@ -83,16 +87,18 @@ if __name__ == '__main__':
     # training_first_time()
     # x_train, x_test, y_train, y_test = load_dataset_v2(r'../t', 3)
 
-    # no_window_training_rawdata(r'../data/gesture/padding/dataset_home.npz', r'../data/gesture/split/splitdata_home.npz', 'models/1.h5')
+    no_window_training_rawdata(TRINGING_PADDING_FILE, TRINGING_SPLIT_FILE, model_file)
     # no_window_training_splitdata(r'../data/gesture/split/splitdata_1.npz')
 
-    dataset = np.load(r'../data/gesture/valpadding/dataset_home.npz')
-    model_file = r'models/1.h5'
-    x = dataset['x']
-    x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
-    print(x.shape)
-    y = dataset['y']
-    y = keras.utils.to_categorical(y, num_classes)
-    model = models.load_model(model_file)
-    val_model(model, x, y, num_classes)
-    # analyze(splitdata_path, r'models/1.h5')
+    analyze(TRINGING_SPLIT_FILE, model_file, csv_file)
+
+    # 另一组数据的评估 evaluate new data
+    # dataset = np.load(r'../data/gesture/valpadding/dataset_home.npz')
+    # model_file = r'models/1.h5'
+    # x = dataset['x']
+    # x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
+    # print(x.shape)
+    # y = dataset['y']
+    # y = keras.utils.to_categorical(y, num_classes)
+    # model = models.load_model(model_file)
+    # val_model(model, x, y, num_classes)

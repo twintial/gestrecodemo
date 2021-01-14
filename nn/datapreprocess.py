@@ -146,15 +146,15 @@ def extract_phasedata_from_audio(audio_file, phasedata_save_file, audio_type='pc
     unwrapped_phase_list = []
     for i in range(NUM_OF_FREQ):
         fc = f0 + i * STEP
-        data_filter = butter_bandpass_filter(data, fc - 250, fc + 250)
+        data_filter = butter_bandpass_filter(data, fc - 150, fc + 150)
         I_raw, Q_raw = get_cos_IQ_raw(data_filter, fc, fs)
         # 滤波+下采样
         I = move_average_overlap_filter(I_raw)
         Q = move_average_overlap_filter(Q_raw)
         # denoise
-        decompositionQ = seasonal_decompose(Q.T, period=5, two_sided=False)
+        decompositionQ = seasonal_decompose(Q.T, period=10, two_sided=False)
         trendQ = decompositionQ.trend
-        decompositionI = seasonal_decompose(I.T, period=5, two_sided=False)
+        decompositionI = seasonal_decompose(I.T, period=10, two_sided=False)
         trendI = decompositionI.trend
 
         trendQ = trendQ.T
@@ -165,8 +165,8 @@ def extract_phasedata_from_audio(audio_file, phasedata_save_file, audio_type='pc
             trendI = trendI.reshape((1, -1))
             trendQ = trendQ.reshape((1, -1))
 
-        trendQ = trendQ[:, 5:]
-        trendI = trendI[:, 5:]
+        trendQ = trendQ[:, 10:]
+        trendI = trendI[:, 10:]
 
         unwrapped_phase = get_phase(trendI, trendQ)  # 这里的展开目前没什么效果
         # plt.plot(unwrapped_phase[0])
