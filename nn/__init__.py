@@ -7,7 +7,7 @@ import keras
 
 from nn.util import dataset_split, data_split_and_save
 
-from config import *
+from pathconfig import *
 
 num_classes = 10
 
@@ -78,7 +78,7 @@ def analyze(splitdata_path, model_file, csv_file):
 
 
 if __name__ == '__main__':
-    model_file = r'models/2.h5'
+    model_file = r'models/3.h5'
     csv_file = r'val.csv'
     # x, y = load_dataset(r'../dataset')
     # y_onehot = keras.utils.to_categorical(y, num_classes)
@@ -87,18 +87,17 @@ if __name__ == '__main__':
     # training_first_time()
     # x_train, x_test, y_train, y_test = load_dataset_v2(r'../t', 3)
 
-    no_window_training_rawdata(TRINGING_PADDING_FILE, TRINGING_SPLIT_FILE, model_file)
+    # no_window_training_rawdata(TRAINING_PADDING_FILE, TRAINING_SPLIT_FILE, model_file)
     # no_window_training_splitdata(r'../data/gesture/split/splitdata_1.npz')
 
-    analyze(TRINGING_SPLIT_FILE, model_file, csv_file)
+    # analyze(TRAINING_SPLIT_FILE, model_file, csv_file)
 
     # 另一组数据的评估 evaluate new data
-    # dataset = np.load(r'../data/gesture/valpadding/dataset_home.npz')
-    # model_file = r'models/1.h5'
-    # x = dataset['x']
-    # x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
-    # print(x.shape)
-    # y = dataset['y']
-    # y = keras.utils.to_categorical(y, num_classes)
-    # model = models.load_model(model_file)
-    # val_model(model, x, y, num_classes)
+    dataset = np.load(TEST_PADDING_FILE)
+    x = dataset['x']
+    x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
+    print(x.shape)
+    y = dataset['y']
+    y = keras.utils.to_categorical(y, num_classes)
+    model = models.load_model(model_file)
+    val_model(model, x, y, num_classes, 'new.csv')

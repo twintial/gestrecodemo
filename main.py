@@ -3,7 +3,7 @@ from nn.datapreprocess import generate_training_data_pcm, extract_phasedata_from
 import numpy as np
 import os
 import re
-from config import *
+from pathconfig import *
 
 def test():
     import os
@@ -31,8 +31,8 @@ def generate_training_dataset(audio_dir, rawdata_dir, offset):
             code = int(m.group(1))
             label = code // 10
             audio_file = os.path.join(audio_dir, audio_file_name)
-            extract_phasedata_from_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'))
-            # extract_magndata_from_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'))
+            # extract_phasedata_from_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'))
+            extract_magndata_from_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'))
 
 
 
@@ -45,7 +45,14 @@ if __name__ == '__main__':
     # generate_training_dataset(r'D:\projects\pyprojects\andriodfaceidproject\temp\gesture1\shenjunjie',
     #                           r'data/gesture/valraw', 0)
 
-    generate_training_dataset(AUDIO_DIR, TRINGING_RAWDATA_DIR, 0)
-    phasedata_padding_labeling(TRINGING_RAWDATA_DIR, TRINGING_PADDING_FILE, 1)
+    # for index, audio_dir in enumerate(TRAINING_AUDIO_DIRS):
+    #     generate_training_dataset(audio_dir, TRAINING_RAWDATA_DIR, index * 10)
+    # phasedata_padding_labeling(TRAINING_RAWDATA_DIR, TRAINING_PADDING_FILE, 1)
+
+
+    for index, audio_dir in enumerate(TEST_AUDIO_DIRS):
+        generate_training_dataset(audio_dir, TEST_RAWDATA_DIR, index * 10)
+    phasedata_padding_labeling(TEST_RAWDATA_DIR, TEST_PADDING_FILE, 1)
+
     # d = np.loadtxt('dataset/whole/14.txt')
     # print(d.shape)
