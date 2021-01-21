@@ -5,7 +5,6 @@ build
 dist
 *.spec
 *.pcm
-*.txt
 dataset
 t
 *.h5

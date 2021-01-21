@@ -1,0 +1,8 @@
+scipy
+arlpy
+matplotlib
+tensorflow==2.3.0
+pandas
+scikit-learn
+numpy==1.18.5
+statsmodels
