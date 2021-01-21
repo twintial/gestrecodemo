@@ -3,21 +3,22 @@ import numpy as np
 from statsmodels.tsa.seasonal import seasonal_decompose
 
 from audiotools.util import get_dtype_from_width, load_audio_data
+from dsptools.beamformer import ump_8_beamform
 from dsptools.filter import butter_bandpass_filter, move_average_overlap_filter
 from dsptools.util import get_cos_IQ, get_phase, get_cos_IQ_raw, get_magnitude
 import re
 import os
 import matplotlib.pyplot as plt
-import keras
+import tensorflow as tf
 from sklearn.model_selection import train_test_split
 
 CHUNK = 2048  # audio frame length
-STEP = 700  # 每个频率的跨度
+STEP = 350  # 每个频率的跨度
 NUM_OF_FREQ = 8  # 频率数量
 DELAY_TIME = 1  # 麦克风的延迟时间
 STD_THRESHOLD = 0.022  # 相位标准差阈值
-nchannels = 1  # 声道数
-
+N_CHANNELS = 7  # 声道数
+F0 = 17000
 
 def print_history(history):
     plt.plot(history['acc'])
@@ -134,18 +135,26 @@ def generate_training_data_pcm(audio_file, dataset_save_file):
 
 
 # 使用整个的方法
-def extract_phasedata_from_audio(audio_file, phasedata_save_file, audio_type='pcm'):
+def extract_phasedata_from_audio(audio_file, phasedata_save_file, audio_type='pcm', mic_array=False):
     origin_data, fs = load_audio_data(audio_file, audio_type)
     fs = fs  # 采样率
-    data = origin_data[int(fs * DELAY_TIME):]
-    data = data.reshape((-1, nchannels))
+    # data = origin_data[int(fs * DELAY_TIME):]
+    # data = data.reshape((-1, N_CHANNELS))
+    # data = data.T  # shape = (num_of_channels, all_frames)
+    if mic_array:
+        data = origin_data.reshape((-1, N_CHANNELS + 1))
+    else:
+        data = origin_data.reshape((-1, N_CHANNELS))
     data = data.T  # shape = (num_of_channels, all_frames)
+    data = data[:, int(fs * DELAY_TIME):]
+    if mic_array:
+        # 第八个声道不要
+        data = data[:7, :]
     # 开始处理数据
     t = 0
-    f0 = 17350
     unwrapped_phase_list = []
     for i in range(NUM_OF_FREQ):
-        fc = f0 + i * STEP
+        fc = F0 + i * STEP
         data_filter = butter_bandpass_filter(data, fc - 150, fc + 150)
         I_raw, Q_raw = get_cos_IQ_raw(data_filter, fc, fs)
         # 滤波+下采样
@@ -177,28 +186,217 @@ def extract_phasedata_from_audio(audio_file, phasedata_save_file, audio_type='pc
         # plt.plot(np.diff(unwrapped_phase).reshape(-1))
         # plt.show()
         unwrapped_phase_list.append(np.diff(np.diff(unwrapped_phase)))
-    merged_u_p = np.array(unwrapped_phase_list).reshape((NUM_OF_FREQ * nchannels * 2, -1))
+    merged_u_p = np.array(unwrapped_phase_list).reshape((NUM_OF_FREQ * N_CHANNELS * 2, -1))
     print(merged_u_p.shape)
     # 压缩便于保存
     flattened_m_u_p = merged_u_p.flatten()
     # 由于长短不一，不能放在一起
     # np.savetxt(dataset_save_file, flattened_m_u_p.reshape(1, -1))
     np.savez_compressed(phasedata_save_file, phasedata=flattened_m_u_p)
-    return nchannels
+    return N_CHANNELS
 
 
-def extract_magndata_from_audio(audio_file, phasedata_save_file, audio_type='pcm'):
+# 针对麦克分阵列进行了一些修改
+def extract_magndata_from_audio(audio_file, phasedata_save_file, audio_type='pcm', mic_array=False):
     origin_data, fs = load_audio_data(audio_file, audio_type)
     fs = fs  # 采样率
-    data = origin_data[int(fs * DELAY_TIME):]
-    data = data.reshape((-1, nchannels))
+    if mic_array:
+        data = origin_data.reshape((-1, N_CHANNELS + 1))
+    else:
+        data = origin_data.reshape((-1, N_CHANNELS))
     data = data.T  # shape = (num_of_channels, all_frames)
+    data = data[:, int(fs * DELAY_TIME):]
+    if mic_array:
+        # 第八个声道不要
+        data = data[:7, :]
     # 开始处理数据
     t = 0
-    f0 = 17350
     magnti_list = []
     for i in range(NUM_OF_FREQ):
-        fc = f0 + i * STEP
+        fc = F0 + i * STEP
+        data_filter = butter_bandpass_filter(data, fc - 150, fc + 150)
+        I_raw, Q_raw = get_cos_IQ_raw(data_filter, fc, fs)
+        # 滤波+下采样
+        I = move_average_overlap_filter(I_raw)
+        Q = move_average_overlap_filter(Q_raw)
+        # denoise
+        decompositionQ = seasonal_decompose(Q.T, period=10, two_sided=False)
+        trendQ = decompositionQ.trend
+        decompositionI = seasonal_decompose(I.T, period=10, two_sided=False)
+        trendI = decompositionI.trend
+
+        trendQ = trendQ.T
+        trendI = trendI.T
+
+        assert trendI.shape == trendQ.shape
+        if len(trendI.shape) == 1:
+            trendI = trendI.reshape((1, -1))
+            trendQ = trendQ.reshape((1, -1))
+
+        trendQ = trendQ[:, 10:]
+        trendI = trendI[:, 10:]
+
+        # plt.plot(trendI[0].reshape(-1))
+        # plt.plot(trendQ[0].reshape(-1))
+        # plt.show()
+
+        magnti = get_magnitude(trendI, trendQ)  # 这里的展开目前没什么效果
+        # plt.plot(np.diff(magnti[0].reshape(-1)))
+        # plt.show()
+        assert magnti.shape[1] > 1
+        # 用diff，和两次diff
+        magnti_list.append(np.diff(magnti)[:, :-1])
+        # plt.plot(np.diff(magnti).reshape(-1))
+        # plt.show()
+        magnti_list.append(np.diff(np.diff(magnti)))
+    merged_u_p = np.array(magnti_list).reshape((NUM_OF_FREQ * N_CHANNELS * 2, -1))
+    print(merged_u_p.shape)
+    # 压缩便于保存
+    flattened_m_u_p = merged_u_p.flatten()
+    # 由于长短不一，不能放在一起
+    # np.savetxt(dataset_save_file, flattened_m_u_p.reshape(1, -1))
+    np.savez_compressed(phasedata_save_file, phasedata=flattened_m_u_p)
+    return N_CHANNELS
+
+
+# 针对麦克分阵列进行了一些修改，做beamform
+def extract_magndata_from_beamformed_audio(audio_file, phasedata_save_file, audio_type='pcm', mic_array=False):
+    origin_data, fs = load_audio_data(audio_file, audio_type)
+    fs = fs  # 采样率
+    if mic_array:
+        data = origin_data.reshape((-1, N_CHANNELS + 1))
+    else:
+        data = origin_data.reshape((-1, N_CHANNELS))
+    data = data.T  # shape = (num_of_channels, all_frames)
+    data = data[:, int(fs * DELAY_TIME):]
+    if mic_array:
+        # 第八个声道不要
+        data = data[:7, :]
+    # beamform,角度？
+    data = ump_8_beamform(data, fs, angel=[[np.pi*4/3, 0]])
+    assert data.shape[0] == 1
+    # 开始处理数据
+    t = 0
+    magnti_list = []
+    for i in range(NUM_OF_FREQ):
+        fc = F0 + i * STEP
+        data_filter = butter_bandpass_filter(data, fc - 150, fc + 150)
+        I_raw, Q_raw = get_cos_IQ_raw(data_filter, fc, fs)
+        # 滤波+下采样
+        I = move_average_overlap_filter(I_raw)
+        Q = move_average_overlap_filter(Q_raw)
+        # denoise
+        decompositionQ = seasonal_decompose(Q.T, period=10, two_sided=False)
+        trendQ = decompositionQ.trend
+        decompositionI = seasonal_decompose(I.T, period=10, two_sided=False)
+        trendI = decompositionI.trend
+
+        trendQ = trendQ.T
+        trendI = trendI.T
+
+        assert trendI.shape == trendQ.shape
+        if len(trendI.shape) == 1:
+            trendI = trendI.reshape((1, -1))
+            trendQ = trendQ.reshape((1, -1))
+
+        trendQ = trendQ[:, 10:]
+        trendI = trendI[:, 10:]
+
+        magnti = get_magnitude(trendI, trendQ)  # 这里的展开目前没什么效果
+        # plt.plot(np.diff(magnti[0].reshape(-1)))
+        # plt.show()
+        assert magnti.shape[1] > 1
+        # 用diff，和两次diff
+        magnti_list.append(np.diff(magnti)[:, :-1])
+        # plt.plot(np.diff(magnti).reshape(-1))
+        # plt.show()
+        magnti_list.append(np.diff(np.diff(magnti)))
+    merged_u_p = np.array(magnti_list).reshape((NUM_OF_FREQ * 1 * 2, -1))
+    print(merged_u_p.shape)
+    # 压缩便于保存
+    flattened_m_u_p = merged_u_p.flatten()
+    # 由于长短不一，不能放在一起
+    # np.savetxt(dataset_save_file, flattened_m_u_p.reshape(1, -1))
+    np.savez_compressed(phasedata_save_file, phasedata=flattened_m_u_p)
+    return 1
+
+# 针对麦克分阵列进行了一些修改，做beamform
+def extract_phasedata_from_beamformed_audio(audio_file, phasedata_save_file, audio_type='pcm', mic_array=False):
+    origin_data, fs = load_audio_data(audio_file, audio_type)
+    fs = fs  # 采样率
+    if mic_array:
+        data = origin_data.reshape((-1, N_CHANNELS + 1))
+    else:
+        data = origin_data.reshape((-1, N_CHANNELS))
+    data = data.T  # shape = (num_of_channels, all_frames)
+    data = data[:, int(fs * DELAY_TIME):]
+    if mic_array:
+        # 第八个声道不要
+        data = data[:7, :]
+    # beamform
+    data = ump_8_beamform(data, fs, angel=[[np.pi*4/3, 0]])
+    assert data.shape[0] == 1
+    # 开始处理数据
+    t = 0
+    magnti_list = []
+    for i in range(NUM_OF_FREQ):
+        fc = F0 + i * STEP
+        data_filter = butter_bandpass_filter(data, fc - 150, fc + 150)
+        I_raw, Q_raw = get_cos_IQ_raw(data_filter, fc, fs)
+        # 滤波+下采样
+        I = move_average_overlap_filter(I_raw)
+        Q = move_average_overlap_filter(Q_raw)
+        # denoise
+        decompositionQ = seasonal_decompose(Q.T, period=10, two_sided=False)
+        trendQ = decompositionQ.trend
+        decompositionI = seasonal_decompose(I.T, period=10, two_sided=False)
+        trendI = decompositionI.trend
+
+        trendQ = trendQ.T
+        trendI = trendI.T
+
+        assert trendI.shape == trendQ.shape
+        if len(trendI.shape) == 1:
+            trendI = trendI.reshape((1, -1))
+            trendQ = trendQ.reshape((1, -1))
+
+        trendQ = trendQ[:, 10:]
+        trendI = trendI[:, 10:]
+
+        magnti = get_phase(trendI, trendQ)  # 这里的展开目前没什么效果
+        # plt.plot(np.diff(magnti[0].reshape(-1)))
+        # plt.show()
+        assert magnti.shape[1] > 1
+        # 用diff，和两次diff
+        magnti_list.append(np.diff(magnti)[:, :-1])
+        # plt.plot(np.diff(magnti).reshape(-1))
+        # plt.show()
+        magnti_list.append(np.diff(np.diff(magnti)))
+    merged_u_p = np.array(magnti_list).reshape((NUM_OF_FREQ * 1 * 2, -1))
+    print(merged_u_p.shape)
+    # 压缩便于保存
+    flattened_m_u_p = merged_u_p.flatten()
+    # 由于长短不一，不能放在一起
+    # np.savetxt(dataset_save_file, flattened_m_u_p.reshape(1, -1))
+    np.savez_compressed(phasedata_save_file, phasedata=flattened_m_u_p)
+    return 1
+
+# 只用一个麦克风
+def extract_magndata_from_audio_special_for_onemic(audio_file, phasedata_save_file, audio_type='wav', mic_array=True):
+    origin_data, fs = load_audio_data(audio_file, audio_type)
+    fs = fs  # 采样率
+    data = origin_data.reshape((-1, 8))
+    data = data.T  # shape = (num_of_channels, all_frames)
+    data = data[:, int(fs * DELAY_TIME):]
+    mic_num = 0
+    # 只用一个mic
+    data = data[mic_num, :]
+    data = data.reshape((1, -1))
+    # 开始处理数据
+    t = 0
+    magnti_list = []
+    for i in range(NUM_OF_FREQ):
+        fc = F0 + i * STEP
         data_filter = butter_bandpass_filter(data, fc - 150, fc + 150)
         I_raw, Q_raw = get_cos_IQ_raw(data_filter, fc, fs)
         # 滤波+下采样
@@ -230,14 +428,14 @@ def extract_magndata_from_audio(audio_file, phasedata_save_file, audio_type='pcm
         # plt.plot(np.diff(magnti).reshape(-1))
         # plt.show()
         magnti_list.append(np.diff(np.diff(magnti)))
-    merged_u_p = np.array(magnti_list).reshape((NUM_OF_FREQ * nchannels * 2, -1))
+    merged_u_p = np.array(magnti_list).reshape((NUM_OF_FREQ * 1 * 2, -1))
     print(merged_u_p.shape)
     # 压缩便于保存
     flattened_m_u_p = merged_u_p.flatten()
     # 由于长短不一，不能放在一起
     # np.savetxt(dataset_save_file, flattened_m_u_p.reshape(1, -1))
     np.savez_compressed(phasedata_save_file, phasedata=flattened_m_u_p)
-    return nchannels
+    return 1
 
 
 def phasedata_padding_labeling(phasedata_save_dir: str, dataset_save_file, nchannels, mean_len_method='auto'):
@@ -317,7 +515,7 @@ def load_dataset_v2(dataset_dir, num_classes):
             merged_u_p = flattened_m_u_p.reshape((flattened_m_u_p.shape[0], NUM_OF_FREQ, -1, 1))
             print(merged_u_p.shape)
             y_all = merged_u_p.shape[0] * [int(label)]
-            y_all = keras.utils.to_categorical(y_all, num_classes)
+            y_all = tf.keras.utils.to_categorical(y_all, num_classes)
             x_train_i, x_test_i, y_train_i, y_test_i = train_test_split(merged_u_p, y_all, train_size=0.8)
             x_train_list.append(x_train_i)
             x_test_list.append(x_test_i)

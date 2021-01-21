@@ -1,7 +1,7 @@
-from keras.models import Sequential
-from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, AveragePooling2D, BatchNormalization, ReLU, Dropout
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, AveragePooling2D, BatchNormalization, ReLU, Dropout
 from sklearn.model_selection import train_test_split
-import keras
+from tensorflow.keras import initializers, losses, optimizers
 import numpy as np
 import pandas as pd
 from tensorflow.python.keras.callbacks import ModelCheckpoint
@@ -29,7 +29,7 @@ def cons_cnn_model(input_shape, num_classes):
                      kernel_size=(3, 8),
                      strides=(1, 1),
                      input_shape=input_shape,
-                     bias_initializer=keras.initializers.Constant(value=0.1)))
+                     bias_initializer=initializers.Constant(value=0.1)))
     model.add(BatchNormalization())
     model.add(ReLU())
     model.add(MaxPooling2D(pool_size=(1, 3), strides=(1, 3), padding='same'))
@@ -37,7 +37,7 @@ def cons_cnn_model(input_shape, num_classes):
     model.add(Conv2D(16,
                      kernel_size=(3, 8),
                      strides=(1, 1),
-                     bias_initializer=keras.initializers.Constant(value=0.1)))
+                     bias_initializer=initializers.Constant(value=0.1)))
     model.add(BatchNormalization())
     model.add(ReLU())
     model.add(MaxPooling2D(pool_size=(1, 4), strides=(1, 4), padding='same'))
@@ -45,7 +45,7 @@ def cons_cnn_model(input_shape, num_classes):
     model.add(Conv2D(32,
                      kernel_size=(3, 5),
                      strides=(1, 1),
-                     bias_initializer=keras.initializers.Constant(value=0.1)))
+                     bias_initializer=initializers.Constant(value=0.1)))
     model.add(BatchNormalization(trainable=True, scale=True))
     model.add(ReLU())
     model.add(MaxPooling2D(pool_size=(2, 3), strides=(2, 3), padding='same'))
@@ -53,7 +53,7 @@ def cons_cnn_model(input_shape, num_classes):
     model.add(Conv2D(32,
                      kernel_size=(3, 3),
                      strides=(1, 1),
-                     bias_initializer=keras.initializers.Constant(value=0.1)))
+                     bias_initializer=initializers.Constant(value=0.1)))
     model.add(BatchNormalization(trainable=True, scale=True))
     model.add(ReLU())
     model.add(MaxPooling2D(pool_size=(1, 3), strides=(1, 3), padding='same'))
@@ -61,18 +61,18 @@ def cons_cnn_model(input_shape, num_classes):
     model.add(Conv2D(32,
                      kernel_size=(3, 3),
                      strides=(1, 1),
-                     bias_initializer=keras.initializers.Constant(value=0.1)))
+                     bias_initializer=initializers.Constant(value=0.1)))
     model.add(BatchNormalization(trainable=True, scale=True))
     model.add(ReLU())
     model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'))
 
     model.add(Flatten())
-    model.add(Dense(128, activation='relu', bias_initializer=keras.initializers.Constant(value=0.1)))
+    model.add(Dense(128, activation='relu', bias_initializer=initializers.Constant(value=0.1)))
     model.add(Dropout(0.4))  # 0.4不错
     model.add(Dense(num_classes, activation='softmax'))
 
-    model.compile(loss=keras.losses.categorical_crossentropy,
-                  optimizer=keras.optimizers.Adam(),
+    model.compile(loss=losses.categorical_crossentropy,
+                  optimizer=optimizers.Adam(),
                   metrics=['acc'])
     return model
 
