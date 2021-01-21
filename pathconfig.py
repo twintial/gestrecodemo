@@ -1,6 +1,6 @@
 import os
 
-EXPERIMENT_NAME = r'mic_speaker_magn'  # only need to change this val
+EXPERIMENT_NAME = r'one_mic_speaker_magn'  # only need to change this val
 
 PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
 
