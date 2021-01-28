@@ -1,6 +1,6 @@
-from nn.datapreprocess import generate_training_data_pcm, extract_phasedata_from_audio, phasedata_padding_labeling, \
+from nn.preprocess import generate_training_data_pcm, extract_phasedata_from_audio, phasedata_padding_labeling, \
     extract_magndata_from_audio, extract_magndata_from_audio_special_for_onemic, extract_magndata_from_beamformed_audio, \
-    extract_phasedata_from_beamformed_audio
+    extract_phasedata_from_beamformed_audio, extract_phasedata_from_audio_special_for_onemic
 import numpy as np
 import os
 import re
@@ -34,10 +34,10 @@ def generate_training_dataset(audio_dir, rawdata_dir, offset, audio_type):
             audio_file = os.path.join(audio_dir, audio_file_name)
             # extract_phasedata_from_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'), audio_type=audio_type, mic_array=True)
             # extract_magndata_from_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'), audio_type=audio_type, mic_array=True)
-            # extract_magndata_from_beamformed_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'), audio_type=audio_type, mic_array=True)
+            extract_magndata_from_beamformed_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'), audio_type=audio_type, mic_array=True)
             # extract_phasedata_from_beamformed_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'), audio_type=audio_type, mic_array=True)
-            extract_magndata_from_audio_special_for_onemic(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'), audio_type=audio_type, mic_array=True)
-
+            # extract_magndata_from_audio_special_for_onemic(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'), audio_type=audio_type, mic_array=True)
+            # extract_phasedata_from_audio_special_for_onemic(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'), audio_type=audio_type, mic_array=True)
 
 if __name__ == '__main__':
     # test()

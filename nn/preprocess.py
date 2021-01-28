@@ -1,5 +1,6 @@
 import wave
 import numpy as np
+from arlpy.bf import steering_plane_wave
 from statsmodels.tsa.seasonal import seasonal_decompose
 
 from audiotools.util import get_dtype_from_width, load_audio_data
@@ -19,6 +20,7 @@ DELAY_TIME = 1  # 麦克风的延迟时间
 STD_THRESHOLD = 0.022  # 相位标准差阈值
 N_CHANNELS = 7  # 声道数
 F0 = 17000
+
 
 def print_history(history):
     plt.plot(history['acc'])
@@ -263,6 +265,7 @@ def extract_magndata_from_audio(audio_file, phasedata_save_file, audio_type='pcm
 def extract_magndata_from_beamformed_audio(audio_file, phasedata_save_file, audio_type='pcm', mic_array=False):
     origin_data, fs = load_audio_data(audio_file, audio_type)
     fs = fs  # 采样率
+    # 已经reshape过了为什么还要reshape
     if mic_array:
         data = origin_data.reshape((-1, N_CHANNELS + 1))
     else:
@@ -273,7 +276,7 @@ def extract_magndata_from_beamformed_audio(audio_file, phasedata_save_file, audi
         # 第八个声道不要
         data = data[:7, :]
     # beamform,角度？
-    data = ump_8_beamform(data, fs, angel=[[np.pi*4/3, 0]])
+    data = ump_8_beamform(data, fs, angel=[[np.pi * 4 / 3, 0]])
     assert data.shape[0] == 1
     # 开始处理数据
     t = 0
@@ -320,6 +323,7 @@ def extract_magndata_from_beamformed_audio(audio_file, phasedata_save_file, audi
     np.savez_compressed(phasedata_save_file, phasedata=flattened_m_u_p)
     return 1
 
+
 # 针对麦克分阵列进行了一些修改，做beamform
 def extract_phasedata_from_beamformed_audio(audio_file, phasedata_save_file, audio_type='pcm', mic_array=False):
     origin_data, fs = load_audio_data(audio_file, audio_type)
@@ -334,7 +338,7 @@ def extract_phasedata_from_beamformed_audio(audio_file, phasedata_save_file, aud
         # 第八个声道不要
         data = data[:7, :]
     # beamform
-    data = ump_8_beamform(data, fs, angel=[[np.pi*4/3, 0]])
+    data = ump_8_beamform(data, fs, angel=[[np.pi * 4 / 3, 0]])
     assert data.shape[0] == 1
     # 开始处理数据
     t = 0
@@ -381,7 +385,121 @@ def extract_phasedata_from_beamformed_audio(audio_file, phasedata_save_file, aud
     np.savez_compressed(phasedata_save_file, phasedata=flattened_m_u_p)
     return 1
 
+
+def draw_circle(I, Q, fs=48e3):
+    fig, ax = plt.subplots()
+    plt.grid()
+    ax.set_ylim([-10, 10])
+    ax.set_xlim([-10, 10])
+    circle, = ax.plot(0, 0, label='I/Q')
+    timer = fig.canvas.new_timer(interval=100)
+    def OnTimer(ax):
+        global index
+        speed = 1
+        circle.set_ydata(Q[:index*speed])
+        circle.set_xdata(I[:index*speed])
+        index = index + 1
+        ax.draw_artist(circle)
+        ax.figure.canvas.draw()
+        if index*speed > len(Q):
+            print("end")
+        else:
+            print(f"time:{(index*speed)/fs}")
+    timer.add_callback(OnTimer, ax)
+    timer.start()
+    plt.show()
+def cons_uca(r):
+    theta = np.pi / 3
+    pos = [[0, 0, 0]]
+    for i in range(6):
+        pos.append([r*np.cos(theta*i), r*np.sin(theta*i), 0])
+    return np.array(pos)
+# 在I/Q之后beamform
+def beamform_after_IQ():
+    data, fs = load_audio_data(r'D:\实验数据\2021\毕设\micarrayspeaker\sjj\gesture1\0.wav', 'wav')
+    data = data.T
+    data = data[:7, int(fs * DELAY_TIME):]
+
+    phase_list = []
+    for i in range(NUM_OF_FREQ):
+        fc = F0 + i * STEP
+        data_filter = butter_bandpass_filter(data, fc - 150, fc + 150)
+        I_raw, Q_raw = get_cos_IQ_raw(data_filter, fc, fs)
+        # 滤波+下采样
+        I = move_average_overlap_filter(I_raw)
+        Q = move_average_overlap_filter(Q_raw)
+
+        # I = I[:, 5:-5]
+        # Q = Q[:, 5:-5]
+
+        # plt.plot(I[0][5:-5])
+        # plt.plot(Q[0][5:-5])
+        # plt.show()
+        # denoise
+        decompositionQ = seasonal_decompose(Q.T, period=10, two_sided=False)
+        trendQ = decompositionQ.trend
+        decompositionI = seasonal_decompose(I.T, period=10, two_sided=False)
+        trendI = decompositionI.trend
+
+        trendQ = trendQ.T
+        trendI = trendI.T
+        # trendQ = Q
+        # trendI = I
+        assert trendI.shape == trendQ.shape
+        if len(trendI.shape) == 1:
+            trendI = trendI.reshape((1, -1))
+            trendQ = trendQ.reshape((1, -1))
+
+        trendQ = trendQ[:, 10:]
+        trendI = trendI[:, 10:]
+        raw_phase = get_phase(trendI, trendQ)
+
+        exp_phase = trendI + 1j * trendQ
+
+        # beamform
+        angel = 0
+        two_d_angel = [[np.deg2rad(angel), 0]]
+        c = 343
+        spacing = 0.043
+        mic_array_pos = cons_uca(spacing)
+
+        # 估计
+        sigma = []
+        for angel_1 in range(0, 360):
+            two_angel = [[np.deg2rad(angel_1), 0]]
+            sd = steering_plane_wave(mic_array_pos, c, two_angel)
+            adjust = np.exp(-1j * 2 * np.pi * fc * sd)
+            syn_signals = exp_phase * adjust.T
+            # syn_signals = np.real(syn_signals)
+            beamformed_signal = np.sum(syn_signals, axis=0)
+            sigma.append(np.sum(abs(beamformed_signal)))
+        print(np.argmax(sigma))
+        plt.plot(sigma)
+        plt.grid()
+        plt.show()
+
+
+        sd = steering_plane_wave(mic_array_pos, c, two_d_angel)
+        adjust = np.exp(-1j * 2 * np.pi * fc * sd).T
+        assert exp_phase.shape[0] == adjust.shape[0]
+        syn_signals = exp_phase * adjust
+        beamformed_signal = np.sum(syn_signals, axis=0).reshape(1, -1)
+        phase = get_phase(np.real(beamformed_signal), np.imag(beamformed_signal))
+
+        plt.figure()
+        plt.subplot(2, 1, 1)
+        plt.plot(raw_phase[0])
+        plt.subplot(2, 1, 2)
+        plt.plot(phase[0])
+        plt.show()
+
+        phase_list.append(phase)
+
+
+
 # 只用一个麦克风
+
+beamform_after_IQ()
 def extract_magndata_from_audio_special_for_onemic(audio_file, phasedata_save_file, audio_type='wav', mic_array=True):
     origin_data, fs = load_audio_data(audio_file, audio_type)
     fs = fs  # 采样率
@@ -420,6 +538,62 @@ def extract_magndata_from_audio_special_for_onemic(audio_file, phasedata_save_fi
         trendI = trendI[:, 10:]
 
         magnti = get_magnitude(trendI, trendQ)  # 这里的展开目前没什么效果
+        # plt.plot(magnti[0])
+        # plt.show()
+        assert magnti.shape[1] > 1
+        # 用diff，和两次diff
+        magnti_list.append(np.diff(magnti)[:, :-1])
+        # plt.plot(np.diff(magnti).reshape(-1))
+        # plt.show()
+        magnti_list.append(np.diff(np.diff(magnti)))
+    merged_u_p = np.array(magnti_list).reshape((NUM_OF_FREQ * 1 * 2, -1))
+    print(merged_u_p.shape)
+    # 压缩便于保存
+    flattened_m_u_p = merged_u_p.flatten()
+    # 由于长短不一，不能放在一起
+    # np.savetxt(dataset_save_file, flattened_m_u_p.reshape(1, -1))
+    np.savez_compressed(phasedata_save_file, phasedata=flattened_m_u_p)
+    return 1
+
+
+def extract_phasedata_from_audio_special_for_onemic(audio_file, phasedata_save_file, audio_type='wav', mic_array=True):
+    origin_data, fs = load_audio_data(audio_file, audio_type)
+    fs = fs  # 采样率
+    data = origin_data.reshape((-1, 8))
+    data = data.T  # shape = (num_of_channels, all_frames)
+    data = data[:, int(fs * DELAY_TIME):]
+    mic_num = 0
+    # 只用一个mic
+    data = data[mic_num, :]
+    data = data.reshape((1, -1))
+    # 开始处理数据
+    t = 0
+    magnti_list = []
+    for i in range(NUM_OF_FREQ):
+        fc = F0 + i * STEP
+        data_filter = butter_bandpass_filter(data, fc - 150, fc + 150)
+        I_raw, Q_raw = get_cos_IQ_raw(data_filter, fc, fs)
+        # 滤波+下采样
+        I = move_average_overlap_filter(I_raw)
+        Q = move_average_overlap_filter(Q_raw)
+        # denoise
+        decompositionQ = seasonal_decompose(Q.T, period=10, two_sided=False)
+        trendQ = decompositionQ.trend
+        decompositionI = seasonal_decompose(I.T, period=10, two_sided=False)
+        trendI = decompositionI.trend
+
+        trendQ = trendQ.T
+        trendI = trendI.T
+
+        assert trendI.shape == trendQ.shape
+        if len(trendI.shape) == 1:
+            trendI = trendI.reshape((1, -1))
+            trendQ = trendQ.reshape((1, -1))
+
+        trendQ = trendQ[:, 10:]
+        trendI = trendI[:, 10:]
+
+        magnti = get_phase(trendI, trendQ)  # 这里的展开目前没什么效果
         # plt.plot(magnti[0])
         # plt.show()
         assert magnti.shape[1] > 1

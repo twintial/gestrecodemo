@@ -3,7 +3,7 @@ import sys
 from tensorflow.keras import models
 
 from nn.model import cons_cnn_model, train_model, train_model_v2, val_model
-from nn.datapreprocess import load_dataset, load_dataset_v2
+from nn.preprocess import load_dataset, load_dataset_v2
 import numpy as np
 import tensorflow as tf
 

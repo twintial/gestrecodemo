@@ -5,6 +5,7 @@ import pandas as pd
 from tensorflow.python.keras.callbacks import ModelCheckpoint
 
 from nn import dataset_split
+from nn.preprocess import print_history
 from nn.util import dataset_split_two_dataset
 from pathconfig import PROJECT_DIR
 import os
@@ -85,9 +86,9 @@ def integrated_model(phase_shape, magn_shape, num_classes):
 def train():
     nclasses = 10
     ratio = 0.8
-    random_index = np.random.permutation(30)
+    random_index = np.random.permutation(10)
 
-    phase_dataset = np.load(os.path.join(PROJECT_DIR, 'data/mic_speaker_phase/train/padding/dataset.npz'))
+    phase_dataset = np.load(os.path.join(PROJECT_DIR, 'data/distant_mic_phase/train/padding/dataset.npz'))
     x_phase = phase_dataset['x']
     x_phase = x_phase.reshape((x_phase.shape[0], x_phase.shape[1], x_phase.shape[2], 1))
     print(x_phase.shape)
@@ -100,7 +101,7 @@ def train():
                                                                                          test_random, x_phase, y_phase,
                                                                                          ratio=0.8)  # 最好保存一下
 
-    magn_dataset = np.load(os.path.join(PROJECT_DIR, 'data/mic_speaker_magn/train/padding/dataset.npz'))
+    magn_dataset = np.load(os.path.join(PROJECT_DIR, 'data/distant_mic_magn/train/padding/dataset.npz'))
     x_magn = magn_dataset['x']
     x_magn = x_magn.reshape((x_magn.shape[0], x_magn.shape[1], x_magn.shape[2], 1))
     print(x_magn.shape)
@@ -118,22 +119,24 @@ def train():
     checkpoint = ModelCheckpoint(save_path, monitor='val_acc', verbose=1, save_best_only=True, mode='max', period=2)
     callbacks_list = [checkpoint]
     history = model.fit((x_phase_train, x_magn_train), y_magn_train,
+                        batch_size=16,
                         epochs=1000,
                         validation_data=((x_phase_test, x_magn_test), y_magn_test),
                         callbacks=callbacks_list,
                         verbose=1)
+    print_history(history.history)
 
 
 def val(model: tf.keras.Model):
     nclasses = 10
 
-    phase_dataset = np.load(os.path.join(PROJECT_DIR, 'data/mic_speaker_phase/test/padding/dataset.npz'))
+    phase_dataset = np.load(os.path.join(PROJECT_DIR, 'data/distant_mic_phase/test/padding/dataset.npz'))
     x_phase = phase_dataset['x']
     x_phase = x_phase.reshape((x_phase.shape[0], x_phase.shape[1], x_phase.shape[2], 1))
     print(x_phase.shape)
     y_phase = phase_dataset['y']
 
-    magn_dataset = np.load(os.path.join(PROJECT_DIR, 'data/mic_speaker_magn/test/padding/dataset.npz'))
+    magn_dataset = np.load(os.path.join(PROJECT_DIR, 'data/distant_mic_magn/test/padding/dataset.npz'))
     x_magn = magn_dataset['x']
     x_magn = x_magn.reshape((x_magn.shape[0], x_magn.shape[1], x_magn.shape[2], 1))
     print(x_magn.shape)

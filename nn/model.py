@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from tensorflow.python.keras.callbacks import ModelCheckpoint
 
-from nn.datapreprocess import print_history
+from nn.preprocess import print_history
 
 
 def cons_cnn_model(input_shape, num_classes):
