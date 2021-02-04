@@ -32,9 +32,9 @@ def generate_training_dataset(audio_dir, rawdata_dir, offset, audio_type):
             code = int(m.group(1))
             label = code // 10
             audio_file = os.path.join(audio_dir, audio_file_name)
-            # extract_phasedata_from_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'), audio_type=audio_type, mic_array=True)
+            extract_phasedata_from_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'), audio_type=audio_type, mic_array=True)
             # extract_magndata_from_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'), audio_type=audio_type, mic_array=True)
-            extract_magndata_from_beamformed_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'), audio_type=audio_type, mic_array=True)
+            # extract_magndata_from_beamformed_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'), audio_type=audio_type, mic_array=True)
             # extract_phasedata_from_beamformed_audio(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'), audio_type=audio_type, mic_array=True)
             # extract_magndata_from_audio_special_for_onemic(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'), audio_type=audio_type, mic_array=True)
             # extract_phasedata_from_audio_special_for_onemic(audio_file, os.path.join(rawdata_dir, f'{code + offset}-{label}'), audio_type=audio_type, mic_array=True)

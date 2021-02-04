@@ -1,11 +1,12 @@
 import wave
 import numpy as np
+from arlpy import bf
 from arlpy.bf import steering_plane_wave
 from statsmodels.tsa.seasonal import seasonal_decompose
 
 from audiotools.util import get_dtype_from_width, load_audio_data
 from dsptools.beamformer import ump_8_beamform
-from dsptools.filter import butter_bandpass_filter, move_average_overlap_filter
+from dsptools.filter import butter_bandpass_filter, move_average_overlap_filter, butter_lowpass_filter
 from dsptools.util import get_cos_IQ, get_phase, get_cos_IQ_raw, get_magnitude
 import re
 import os
@@ -385,7 +386,43 @@ def extract_phasedata_from_beamformed_audio(audio_file, phasedata_save_file, aud
     np.savez_compressed(phasedata_save_file, phasedata=flattened_m_u_p)
     return 1
 
+index = 0
+"""
+aziang = np.arange(-180, 180)
+eleang = np.arange(-1, 30)
+"""
+def music(x: np.ndarray, pos, f, c, aziang, eleang, nsignals):
+    # a = bf.covariance(x)
+    R = np.dot(x, x.conj().T) / 1000
+    D, V = np.linalg.eigh(R)
+    idx = D.argsort()[::-1]
+    eigenvals = D[idx]  # Sorted vector of eigenvalues
+    eigenvects = V[:, idx]  # Eigenvectors rearranged accordingly
+    noise_eigenvects = eigenvects[:, nsignals:len(eigenvects)]  # Noise eigenvectors
+    # 计算迭代次数，最小化计算开销
+    len_az = len(aziang)
+    len_el = len(eleang)
+    pattern_shape = (len_el, len_az)
+    scan_az, scan_el = np.meshgrid(aziang, eleang)
+    scan_angles = np.vstack((scan_az.reshape(-1, order='F'), scan_el.reshape(-1, order='F'))) # shape=(2, len_el*len_az)
 
+    num_iter = min(len_el, len_az)
+    scan_angle_block_size = max(len_el, len_az)
+    scan_angle_block_index = np.arange(scan_angle_block_size)
+    # scan
+    pattern = np.zeros(len_az * len_el)
+    for i in range(num_iter):
+        cur_idx = scan_angle_block_index + i * scan_angle_block_size
+        cur_angles = scan_angles[:, cur_idx]
+        time_delay = bf.steering_plane_wave(pos, c, np.deg2rad(cur_angles.T)).T
+        a = np.exp(-1j*2*np.pi*f*time_delay)
+        # 两种方法一样
+        # A = a.conj().T.dot(noise_eigenvects).dot(noise_eigenvects.conj().T).dot(a)
+        # D = np.diag(A)
+        D = np.sum(np.abs((a.T.dot(noise_eigenvects)))**2, 1)
+        pattern[cur_idx] = 1 / D
+    scan_pattern = np.sqrt(pattern).reshape(pattern_shape, order='F')
+    return scan_pattern
 def draw_circle(I, Q, fs=48e3):
     fig, ax = plt.subplots()
     plt.grid()
@@ -395,7 +432,7 @@ def draw_circle(I, Q, fs=48e3):
     timer = fig.canvas.new_timer(interval=100)
     def OnTimer(ax):
         global index
-        speed = 1
+        speed = 10
         circle.set_ydata(Q[:index*speed])
         circle.set_xdata(I[:index*speed])
         index = index + 1
@@ -415,11 +452,11 @@ def cons_uca(r):
         pos.append([r*np.cos(theta*i), r*np.sin(theta*i), 0])
     return np.array(pos)
 # 在I/Q之后beamform
-def beamform_after_IQ():
-    data, fs = load_audio_data(r'D:\实验数据\2021\毕设\micarrayspeaker\sjj\gesture1\0.wav', 'wav')
+def beamform_after_IQ(filename, start, dur):
+    data, fs = load_audio_data(filename, 'wav')
     data = data.T
     data = data[:7, int(fs * DELAY_TIME):]
-
+    # data = data[:7, start:start+dur]
     phase_list = []
     for i in range(NUM_OF_FREQ):
         fc = F0 + i * STEP
@@ -428,6 +465,8 @@ def beamform_after_IQ():
         # 滤波+下采样
         I = move_average_overlap_filter(I_raw)
         Q = move_average_overlap_filter(Q_raw)
+        # I = butter_lowpass_filter(I_raw, 150)
+        # Q = butter_lowpass_filter(Q_raw, 150)
 
         # I = I[:, 5:-5]
         # Q = Q[:, 5:-5]
@@ -452,32 +491,45 @@ def beamform_after_IQ():
 
         trendQ = trendQ[:, 10:]
         trendI = trendI[:, 10:]
+        # draw_circle(trendI[0], trendQ[0])
         raw_phase = get_phase(trendI, trendQ)
 
         exp_phase = trendI + 1j * trendQ
 
         # beamform
-        angel = 0
-        two_d_angel = [[np.deg2rad(angel), 0]]
+        a_angel = 270
+        e_angel = 0
+        two_d_angel = [[np.deg2rad(a_angel), np.deg2rad(e_angel)]]
         c = 343
         spacing = 0.043
         mic_array_pos = cons_uca(spacing)
 
+        # sp = music(data, mic_array_pos, fc, c, np.arange(0, 360), np.arange(0, 30), 1)
+        # # plt.plot(sp.reshape(-1))
+        # plt.pcolormesh(sp)
+        # plt.show()
+
+
+        azumi = (0, 360)
+        eleva = (0, 90)
+
+        beamscan_spectrum = np.zeros((azumi[1] - azumi[0], eleva[1] - eleva[0]))
         # 估计
-        sigma = []
-        for angel_1 in range(0, 360):
-            two_angel = [[np.deg2rad(angel_1), 0]]
-            sd = steering_plane_wave(mic_array_pos, c, two_angel)
-            adjust = np.exp(-1j * 2 * np.pi * fc * sd)
-            syn_signals = exp_phase * adjust.T
-            # syn_signals = np.real(syn_signals)
-            beamformed_signal = np.sum(syn_signals, axis=0)
-            sigma.append(np.sum(abs(beamformed_signal)))
-        print(np.argmax(sigma))
-        plt.plot(sigma)
+        for angel_1 in range(azumi[0], azumi[1]):
+            for angel_2 in range(eleva[0], eleva[1]):
+                two_angel = [[np.deg2rad(angel_1), np.deg2rad(angel_2)]]
+                sd = steering_plane_wave(mic_array_pos, c, two_angel)
+                adjust = np.exp(-1j * 2 * np.pi * fc * sd)
+                syn_signals = exp_phase * adjust.T
+                # syn_signals = np.real(syn_signals)
+                beamformed_signal = np.sum(syn_signals, axis=0)
+                beamscan_spectrum[angel_1][angel_2] = np.sum(abs(beamformed_signal))
+        # return beamscan_spectrum
+        # plt.pcolormesh(beamscan_spectrum)
+        # plt.show()
+        plt.plot(beamscan_spectrum[:, 0])
         plt.grid()
         plt.show()
-
 
         sd = steering_plane_wave(mic_array_pos, c, two_d_angel)
         adjust = np.exp(-1j * 2 * np.pi * fc * sd).T
@@ -485,6 +537,8 @@ def beamform_after_IQ():
         syn_signals = exp_phase * adjust
         beamformed_signal = np.sum(syn_signals, axis=0).reshape(1, -1)
         phase = get_phase(np.real(beamformed_signal), np.imag(beamformed_signal))
+
+        plt.show()
 
         plt.figure()
         plt.subplot(2, 1, 1)
@@ -495,11 +549,13 @@ def beamform_after_IQ():
 
         phase_list.append(phase)
 
-
-
-# 只用一个麦克风
-
-beamform_after_IQ()
+# # 只用一个麦克风
+# beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\0\270.wav', 48000*1, 48000)
+# a = beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\0\0.wav', 48000*1, 48000)
+# b = beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\0\2.wav', 48000*1+2048, 48000)
+# c = b - a
+# plt.pcolormesh(a)
+# plt.show()
 def extract_magndata_from_audio_special_for_onemic(audio_file, phasedata_save_file, audio_type='wav', mic_array=True):
     origin_data, fs = load_audio_data(audio_file, audio_type)
     fs = fs  # 采样率
