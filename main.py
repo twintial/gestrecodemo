@@ -50,12 +50,12 @@ if __name__ == '__main__':
 
     for index, audio_dir in enumerate(TRAINING_AUDIO_DIRS):
         generate_training_dataset(audio_dir, TRAINING_RAWDATA_DIR, index * 10, 'wav')
-    phasedata_padding_labeling(TRAINING_RAWDATA_DIR, TRAINING_PADDING_FILE, nchannels=1)
+    phasedata_padding_labeling(TRAINING_RAWDATA_DIR, TRAINING_PADDING_FILE, nchannels=7)
 
 
     for index, audio_dir in enumerate(TEST_AUDIO_DIRS):
         generate_training_dataset(audio_dir, TEST_RAWDATA_DIR, index * 10, 'wav')
-    phasedata_padding_labeling(TEST_RAWDATA_DIR, TEST_PADDING_FILE, nchannels=1)
+    phasedata_padding_labeling(TEST_RAWDATA_DIR, TEST_PADDING_FILE, nchannels=7)
 
     # d = np.loadtxt('dataset/whole/14.txt')
     # print(d.shape)

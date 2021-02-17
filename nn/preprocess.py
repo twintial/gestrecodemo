@@ -550,7 +550,7 @@ def beamform_after_IQ(filename, start, dur):
         phase_list.append(phase)
 
 # # 只用一个麦克风
-# beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\0\270.wav', 48000*1, 48000)
+beamform_after_IQ(r'D:\实验数据\2021\毕设\micarrayspeaker\sjj\gesture6\65.wav', 48000*1, 48000)
 # a = beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\0\0.wav', 48000*1, 48000)
 # b = beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\0\2.wav', 48000*1+2048, 48000)
 # c = b - a

@@ -1,8 +1,9 @@
 import sys
+import time
 
 from tensorflow.keras import models
 
-from nn.model import cons_cnn_model, train_model, train_model_v2, val_model
+from nn.model import cons_cnn_model, train_model, train_model_v2, val_model, cons_depthwise_separable_cnn_model
 from nn.preprocess import load_dataset, load_dataset_v2
 import numpy as np
 import tensorflow as tf
@@ -46,8 +47,12 @@ def no_window_training_rawdata(rawdata_path, splitdata_path, model_path):
     print(x_train.shape)
     y_train = tf.keras.utils.to_categorical(y_train, num_classes)
     y_test = tf.keras.utils.to_categorical(y_test, num_classes)
-    model = cons_cnn_model(x.shape[1:], num_classes)
-    train_model_v2(model, x_train, x_test, y_train, y_test, batch_size=16, epochs=2000, save_path=model_path)
+    model = cons_depthwise_separable_cnn_model(x.shape[1:], num_classes)
+
+    time_start = time.time()
+    train_model_v2(model, x_train, x_test, y_train, y_test, batch_size=64, epochs=1000, save_path=model_path)
+    time_end = time.time()
+    print('totally cost', time_end - time_start)
     # val_model(model, x_test, y_test, num_classes)
     # train_model(model, x, y_onehot, batch_size=1, epochs=20)
 
@@ -62,7 +67,7 @@ def no_window_training_splitdata(splitdata_path, model_path):
     y_train = tf.keras.utils.to_categorical(y_train, num_classes)
     y_test = tf.keras.utils.to_categorical(y_test, num_classes)
     model = cons_cnn_model(x_train.shape[1:], num_classes)
-    train_model_v2(model, x_train, x_test, y_train, y_test, batch_size=16, epochs=1000, save_path=model_path)
+    train_model_v2(model, x_train, x_test, y_train, y_test, batch_size=64, epochs=1000, save_path=model_path)
     # val_model(model, x_test, y_test, num_classes)
     # train_model(model, x, y_onehot, batch_size=1, epochs=20)
 

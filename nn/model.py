@@ -1,9 +1,10 @@
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, AveragePooling2D, BatchNormalization, ReLU, Dropout
-from sklearn.model_selection import train_test_split
-from tensorflow.keras import initializers, losses, optimizers
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
+from tensorflow.keras import initializers, losses, optimizers
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, BatchNormalization, ReLU, Dropout, \
+    SeparableConv2D
+from tensorflow.keras.models import Sequential
 from tensorflow.python.keras.callbacks import ModelCheckpoint
 
 from nn.preprocess import print_history
@@ -68,13 +69,72 @@ def cons_cnn_model(input_shape, num_classes):
 
     model.add(Flatten())
     model.add(Dense(128, activation='relu', bias_initializer=initializers.Constant(value=0.1)))
-    model.add(Dropout(0.4))  # 0.4不错
+    model.add(Dropout(0.6))  # 0.4不错
     model.add(Dense(num_classes, activation='softmax'))
 
     model.compile(loss=losses.categorical_crossentropy,
                   optimizer=optimizers.Adam(),
                   metrics=['acc'])
+    model.summary()
     return model
+
+
+def cons_depthwise_separable_cnn_model(input_shape, num_classes):
+    model = Sequential()
+    model.add(SeparableConv2D(8,
+                              kernel_size=(3, 8),
+                              strides=(1, 1),
+                              input_shape=input_shape,
+                              bias_initializer=initializers.Constant(value=0.1),
+                              depth_multiplier=1))
+    model.add(BatchNormalization())
+    model.add(ReLU())
+    model.add(MaxPooling2D(pool_size=(1, 3), strides=(1, 3), padding='same'))
+
+    model.add(SeparableConv2D(16,
+                              kernel_size=(3, 8),
+                              strides=(1, 1),
+                              bias_initializer=initializers.Constant(value=0.1)))
+    model.add(BatchNormalization())
+    model.add(ReLU())
+    model.add(MaxPooling2D(pool_size=(1, 4), strides=(1, 4), padding='same'))
+
+    model.add(SeparableConv2D(32,
+                              kernel_size=(3, 5),
+                              strides=(1, 1),
+                              bias_initializer=initializers.Constant(value=0.1)))
+    model.add(BatchNormalization(trainable=True, scale=True))
+    model.add(ReLU())
+    model.add(MaxPooling2D(pool_size=(2, 3), strides=(2, 3), padding='same'))
+
+    model.add(SeparableConv2D(32,
+                              kernel_size=(3, 3),
+                              strides=(1, 1),
+                              bias_initializer=initializers.Constant(value=0.1)))
+    model.add(BatchNormalization(trainable=True, scale=True))
+    model.add(ReLU())
+    model.add(MaxPooling2D(pool_size=(1, 3), strides=(1, 3), padding='same'))
+
+    model.add(SeparableConv2D(32,
+                              kernel_size=(3, 3),
+                              strides=(1, 1),
+                              bias_initializer=initializers.Constant(value=0.1)))
+    model.add(BatchNormalization(trainable=True, scale=True))
+    model.add(ReLU())
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'))
+
+    model.add(Flatten())
+    model.add(Dense(128, activation='relu', bias_initializer=initializers.Constant(value=0.1)))
+    model.add(Dropout(0.6))  # 0.4不错
+    model.add(Dense(num_classes, activation='softmax'))
+    model.compile(loss=losses.categorical_crossentropy,
+                  optimizer=optimizers.Adam(),
+                  metrics=['acc'])
+    model.summary()
+    return model
+
+# cons_depthwise_separable_cnn_model(input_shape=(112, 700, 1), num_classes=10)
+# cons_cnn_model(input_shape=(112, 700, 1), num_classes=10)
 
 
 def train_model(model: Sequential, x, y, batch_size=32, epochs=100, save_path=None):
@@ -107,7 +167,7 @@ def train_model_v2(model: Sequential, x_train, x_test, y_train, y_test, batch_si
                        verbose=1)
     # if save_path:
     #     model.save(save_path)
-    print_history(result.history)
+    # print_history(result.history)
     return result
 
 
@@ -123,7 +183,7 @@ def val_model(model: Sequential, x_test, y_test, nclasses, csv_file):
     acc = np.diag(analyze_mat).mean()
     print(f"acc: {acc}")
     p = pd.DataFrame(analyze_mat)
-    p.columns = ['握紧', '张开','左滑','右滑','上滑','下滑','前推','后推','顺时针转圈','逆时针转圈']
-    p.index = ['握紧', '张开','左滑','右滑','上滑','下滑','前推','后推','顺时针转圈','逆时针转圈']
+    p.columns = ['握紧', '张开', '左滑', '右滑', '上滑', '下滑', '前推', '后推', '顺时针转圈', '逆时针转圈']
+    p.index = ['握紧', '张开', '左滑', '右滑', '上滑', '下滑', '前推', '后推', '顺时针转圈', '逆时针转圈']
     p.to_csv(csv_file)
     return analyze_mat
