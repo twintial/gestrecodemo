@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import initializers, losses, optimizers
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, BatchNormalization, ReLU, Dropout, \
@@ -69,7 +70,7 @@ def cons_cnn_model(input_shape, num_classes):
 
     model.add(Flatten())
     model.add(Dense(128, activation='relu', bias_initializer=initializers.Constant(value=0.1)))
-    model.add(Dropout(0.6))  # 0.4不错
+    model.add(Dropout(0.5))  # 表示丢弃率
     model.add(Dense(num_classes, activation='softmax'))
 
     model.compile(loss=losses.categorical_crossentropy,
@@ -156,7 +157,7 @@ def train_model_v2(model: Sequential, x_train, x_test, y_train, y_test, batch_si
     #     keras.callbacks.EarlyStopping(monitor='val_acc', baseline=0.85),
     # ]
     # 保存最好模型
-    checkpoint = ModelCheckpoint(save_path, monitor='val_acc', verbose=1, save_best_only=True, mode='max', period=2)
+    checkpoint = ModelCheckpoint(save_path, monitor='val_acc', verbose=1, save_best_only=True, mode='max', save_freq='epoch')
     callbacks_list = [checkpoint]
     result = model.fit(x_train,
                        y_train,

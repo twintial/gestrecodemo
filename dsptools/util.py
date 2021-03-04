@@ -30,6 +30,15 @@ def get_cos_IQ_raw(data: np.ndarray, f, fs=48e3) -> (np.ndarray, np.ndarray):
     Q_raw = -np.sin(2 * np.pi * f * times) * data
     return I_raw, Q_raw
 
+# 多了offset
+def get_cos_IQ_raw_offset(data: np.ndarray, f, offset, fs=48e3) -> (np.ndarray, np.ndarray):
+    frames = data.shape[1]
+    # offset会一直增长，可能存在问题
+    times = np.arange(offset, offset + frames) * 1 / fs
+    I_raw = np.cos(2 * np.pi * f * times) * data
+    Q_raw = -np.sin(2 * np.pi * f * times) * data
+    return I_raw, Q_raw
+
 
 def get_phase(I: np.ndarray, Q: np.ndarray) -> np.ndarray:
     signal = I + 1j * Q
