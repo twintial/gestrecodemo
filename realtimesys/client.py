@@ -14,12 +14,12 @@ if __name__ == '__main__':
 
     offset = 0
 
+    max_frame = 48000  # 对延迟影响很大
+
     fig, ax = plt.subplots()
-    phase = [None] * 100000
+    phase = [None] * max_frame
     l_phase, = ax.plot(phase)
     plt.pause(0.01)
-
-    max_frame = 48000
 
     address = ('127.0.0.1', 31500)
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
