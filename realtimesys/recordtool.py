@@ -51,14 +51,17 @@ class Record:
         self.save_path = save_path
 
     def input_callback(self, in_data, frame_count, time_info, status_flags):
-        self.frames_byte.append(in_data)
-        data = np.frombuffer(in_data, dtype=np.int16)
+        # 传送数据
         self.connection.send(in_data)
+        self.frames_byte.append(in_data)
 
-        # # 这里做处理
-        # # 多个声道，一个隔一个是一个声道
+        # 这里做处理
+        # 多个声道，一个隔一个是一个声道
+        # 存在时间开销
+        data = np.frombuffer(in_data, dtype=np.int16)
         data = data.reshape(-1, self.channels).T
         self.frames_int = data if self.frames_int is None else np.hstack((self.frames_int, data))
+
         # if self.frames_int.shape[1] > 3 * frame_count:
         #     # 前后都多拿一个CHUNK
         #     data_segment = self.frames_int[:, -3 * frame_count:]
