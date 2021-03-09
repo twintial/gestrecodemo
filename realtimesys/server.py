@@ -17,7 +17,7 @@ if __name__ == '__main__':
     print(devices_name)
 
     # 音频可以生成后保存
-    t = 30
+    t = 300
     A = [1, 1, 1, 1, 1, 1, 1, 1]
     alpha = 1 / sum(A)
     y = A[0] * cos_wave(1, 17000, 48e3, t)
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     address = ('127.0.0.1', 31500)
     print('wait for connect')
     recorder = Record(address)
-    recorder.set_param(1, 6, 2, os.path.join(os.getcwd(), 'test.wav'))
+    recorder.set_param(0, 2, 2, os.path.join(os.getcwd(), 'test.wav'))
     recorder.play_and_record(signal)
     time.sleep(t)
     recorder.stop()

@@ -14,7 +14,7 @@ if __name__ == '__main__':
 
     offset = 0
 
-    max_frame = 48000  # 对延迟影响很大
+    max_frame = 48000 * 2  # 对延迟影响很大
 
     # 运动检测参数
     THRESHOLD = 0.008  # 运动判断阈值
@@ -23,9 +23,11 @@ if __name__ == '__main__':
     motion_start = False
     lower_than_threshold_count = 0  # 超过3次即运动停止
     higher_than_threshold_count = 0  # 超过3次即运动开始
-    pre_frame = 4
+    pre_frame = 2
     # 画图参数
     fig, ax = plt.subplots()
+    # ax.set_xlim([0, 48000])
+    # ax.set_ylim([-2, 0])
     phase = [None] * max_frame
     l_phase, = ax.plot(phase)
     motion_start_line = ax.axvline(0, color='r')
@@ -42,7 +44,11 @@ if __name__ == '__main__':
         data = np.frombuffer(rdata, dtype=np.int16)
         data = data.reshape(-1, channels).T
         # assert data.shape[1] == frame_count
+        # frames_int要定时清空
         frames_int = data if frames_int is None else np.hstack((frames_int, data))
+        if frames_int.shape[1] > max_frame * 3:
+            frames_int = frames_int[:, frame_count:]
+            # print(frames_int.shape)
         if frames_int.shape[1] > 3 * frame_count:
             # 前后都多拿一个CHUNK
             data_segment = frames_int[:, -3 * frame_count:]
@@ -96,3 +102,6 @@ if __name__ == '__main__':
             ax.figure.canvas.draw()
             plt.pause(0.001)
             offset += frame_count
+            # 不一定好，暂时先这样
+            if offset > max_frame:
+                offset = 0
