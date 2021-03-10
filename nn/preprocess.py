@@ -489,15 +489,22 @@ def beamform_after_IQ(filename, start, dur):
             trendI = trendI.reshape((1, -1))
             trendQ = trendQ.reshape((1, -1))
 
-        trendQ = trendQ[:, 10:]
-        trendI = trendI[:, 10:]
+        # trendQ = trendQ[:, 10:]
+        # trendI = trendI[:, 10:]
+        trendQ = Q
+        trendI = I
         # draw_circle(trendI[0], trendQ[0])
         raw_phase = get_phase(trendI, trendQ)
 
         exp_phase = trendI + 1j * trendQ
 
+        '''
+        去除噪声，减去平均值（尝试）
+        '''
+        mean_noise = np.mean(raw_phase[:1000], axis=1)
+
         # beamform
-        a_angel = 270
+        a_angel = 120
         e_angel = 0
         two_d_angel = [[np.deg2rad(a_angel), np.deg2rad(e_angel)]]
         c = 343
@@ -513,23 +520,23 @@ def beamform_after_IQ(filename, start, dur):
         azumi = (0, 360)
         eleva = (0, 90)
 
-        beamscan_spectrum = np.zeros((azumi[1] - azumi[0], eleva[1] - eleva[0]))
-        # 估计
-        for angel_1 in range(azumi[0], azumi[1]):
-            for angel_2 in range(eleva[0], eleva[1]):
-                two_angel = [[np.deg2rad(angel_1), np.deg2rad(angel_2)]]
-                sd = steering_plane_wave(mic_array_pos, c, two_angel)
-                adjust = np.exp(-1j * 2 * np.pi * fc * sd)
-                syn_signals = exp_phase * adjust.T
-                # syn_signals = np.real(syn_signals)
-                beamformed_signal = np.sum(syn_signals, axis=0)
-                beamscan_spectrum[angel_1][angel_2] = np.sum(abs(beamformed_signal))
-        # return beamscan_spectrum
-        # plt.pcolormesh(beamscan_spectrum)
+        # beamscan_spectrum = np.zeros((azumi[1] - azumi[0], eleva[1] - eleva[0]))
+        # # 估计
+        # for angel_1 in range(azumi[0], azumi[1]):
+        #     for angel_2 in range(eleva[0], eleva[1]):
+        #         two_angel = [[np.deg2rad(angel_1), np.deg2rad(angel_2)]]
+        #         sd = steering_plane_wave(mic_array_pos, c, two_angel)
+        #         adjust = np.exp(-1j * 2 * np.pi * fc * sd)
+        #         syn_signals = exp_phase * adjust.T
+        #         # syn_signals = np.real(syn_signals)
+        #         beamformed_signal = np.sum(syn_signals, axis=0)
+        #         beamscan_spectrum[angel_1][angel_2] = np.sum(abs(beamformed_signal))
+        # # return beamscan_spectrum
+        # # plt.pcolormesh(beamscan_spectrum)
+        # # plt.show()
+        # plt.plot(beamscan_spectrum[:, 0])
+        # plt.grid()
         # plt.show()
-        plt.plot(beamscan_spectrum[:, 0])
-        plt.grid()
-        plt.show()
 
         sd = steering_plane_wave(mic_array_pos, c, two_d_angel)
         adjust = np.exp(-1j * 2 * np.pi * fc * sd).T
@@ -548,9 +555,35 @@ def beamform_after_IQ(filename, start, dur):
         plt.show()
 
         phase_list.append(phase)
-
+def beamform_real(data, sd, fs=48000):
+    """
+    这种方法分辨率只有15度，越靠近15的倍数度数效果越好
+    :param data:
+    :param sd:
+    :param fs:
+    :return:
+    """
+    a_angel = 0
+    e_angel = 0
+    two_d_angel = [[np.deg2rad(a_angel), np.deg2rad(e_angel)]]
+    c = 343
+    spacing = 0.043
+    mic_array_pos = cons_uca(spacing)
+    sd = steering_plane_wave(mic_array_pos, c, two_d_angel)
+    tailor_frames_nums = np.round(sd * fs)
+    print(tailor_frames_nums)
+    for i, tailor_frames_num in enumerate(tailor_frames_nums):
+        cur_data = data[i]
+        if tailor_frames_num >= 0:
+            data[i] = np.concatenate((data[i, tailor_frames_num:], np.zeros(tailor_frames_num)))
+        else:
+            data[i] = np.concatenate((np.zeros(tailor_frames_num), data[i:-tailor_frames_num]))
+    return data
+def beamform_on_raw_audio_data(filename):
+    pass
+beamform_real(1,1)
 # # 只用一个麦克风
-# beamform_after_IQ(r'D:\实验数据\2021\毕设\micarrayspeaker\sjj\gesture6.wav', 48000*1, 48000)
+# beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\1\240.wav', 48000*1, 48000)
 # a = beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\0\0.wav', 48000*1, 48000)
 # b = beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\0\2.wav', 48000*1+2048, 48000)
 # c = b - a
