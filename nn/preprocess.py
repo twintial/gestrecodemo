@@ -188,8 +188,9 @@ def extract_phasedata_from_audio(audio_file, phasedata_save_file, audio_type='pc
         unwrapped_phase_list.append(np.diff(unwrapped_phase)[:, :-1])
         # plt.plot(np.diff(unwrapped_phase).reshape(-1))
         # plt.show()
-        unwrapped_phase_list.append(np.diff(np.diff(unwrapped_phase)))
-    merged_u_p = np.array(unwrapped_phase_list).reshape((NUM_OF_FREQ * N_CHANNELS * 2, -1))
+
+        # unwrapped_phase_list.append(np.diff(np.diff(unwrapped_phase)))
+    merged_u_p = np.array(unwrapped_phase_list).reshape((NUM_OF_FREQ * N_CHANNELS * 1, -1))
     print(merged_u_p.shape)
     # 压缩便于保存
     flattened_m_u_p = merged_u_p.flatten()
@@ -339,7 +340,7 @@ def extract_phasedata_from_beamformed_audio(audio_file, phasedata_save_file, aud
         # 第八个声道不要
         data = data[:7, :]
     # beamform
-    data = ump_8_beamform(data, fs, angel=[[np.pi * 4 / 3, 0]])
+    data = ump_8_beamform(data, fs, angel=[[np.deg2rad(240), 0]])
     assert data.shape[0] == 1
     # 开始处理数据
     t = 0
@@ -563,29 +564,104 @@ def beamform_real(data, sd, fs=48000):
     :param fs:
     :return:
     """
-    a_angel = 0
+    tailor_frames_nums = np.round(sd[0] * fs) + 6
+    tailor_frames_nums = tailor_frames_nums.astype(np.int16)
+    print(tailor_frames_nums)
+    # 防止 max_tailor_frames - tailor_frames_num == 0
+    max_tailor_frames = np.max(tailor_frames_nums) + 1
+    beamformed_data = None
+    for i, tailor_frames_num in enumerate(tailor_frames_nums):
+        if beamformed_data is None:
+            # copy()因为np.frombuffer得到的数组是read only的，而且赋值好像存在内存共享的情况，有待考证
+            beamformed_data = data[i, tailor_frames_num:tailor_frames_num - max_tailor_frames].copy()
+        else:
+            beamformed_data += data[i, tailor_frames_num:tailor_frames_num - max_tailor_frames]
+    beamformed_data = beamformed_data / len(tailor_frames_nums)
+    return beamformed_data
+def beamform_on_raw_audio_data(filename):
+    data, fs = load_audio_data(filename, 'wav')
+    data = data.T
+    data = data[:7, int(fs * DELAY_TIME):]
+
+    a_angel = 240
     e_angel = 0
     two_d_angel = [[np.deg2rad(a_angel), np.deg2rad(e_angel)]]
     c = 343
     spacing = 0.043
     mic_array_pos = cons_uca(spacing)
     sd = steering_plane_wave(mic_array_pos, c, two_d_angel)
-    tailor_frames_nums = np.round(sd * fs)
-    print(tailor_frames_nums)
-    for i, tailor_frames_num in enumerate(tailor_frames_nums):
-        cur_data = data[i]
-        if tailor_frames_num >= 0:
-            data[i] = np.concatenate((data[i, tailor_frames_num:], np.zeros(tailor_frames_num)))
-        else:
-            data[i] = np.concatenate((np.zeros(tailor_frames_num), data[i:-tailor_frames_num]))
-    return data
-def beamform_on_raw_audio_data(filename):
-    pass
-beamform_real(1,1)
+    beamformed_data = beamform_real(data, sd).reshape(1, -1)
+    beamformed_data_2 = ump_8_beamform(data, 48000, two_d_angel).reshape(1, -1)
+    phase_list = []
+    for i in range(NUM_OF_FREQ):
+        fc = F0 + i * STEP
+        data_filter = butter_bandpass_filter(data, fc - 150, fc + 150)
+        I_raw, Q_raw = get_cos_IQ_raw(data_filter, fc, fs)
+        # 滤波+下采样
+        I = move_average_overlap_filter(I_raw)
+        Q = move_average_overlap_filter(Q_raw)
+        decompositionQ = seasonal_decompose(Q.T, period=10, two_sided=False)
+        trendQ = decompositionQ.trend
+        decompositionI = seasonal_decompose(I.T, period=10, two_sided=False)
+        trendI = decompositionI.trend
+
+        trendQ = trendQ.T
+        trendI = trendI.T
+        # trendQ = Q
+        # trendI = I
+        assert trendI.shape == trendQ.shape
+        if len(trendI.shape) == 1:
+            trendI = trendI.reshape((1, -1))
+            trendQ = trendQ.reshape((1, -1))
+
+        # trendQ = trendQ[:, 10:]
+        # trendI = trendI[:, 10:]
+        trendQ = Q
+        trendI = I
+        # draw_circle(trendI[0], trendQ[0])
+        raw_phase = get_phase(trendI, trendQ)
+
+        '''
+        对相位beamform
+        '''
+        noise = np.mean(raw_phase[:, 20:60], axis=1).reshape(-1,1)
+        print(noise.shape)
+        raw_phase_denoised = raw_phase - noise
+
+        bphase_denoised = beamform_real(raw_phase_denoised, sd).reshape(1,-1)
+
+        def normalize_max_min(x):
+            max = np.max(x)
+            min = np.min(x)
+            return (x - min) / (max - min)
+
+
+        '''
+        对beamformed signal求相位
+        '''
+        beamformed_data_filter = butter_bandpass_filter(beamformed_data, fc - 150, fc + 150)
+        bI_raw, bQ_raw = get_cos_IQ_raw(beamformed_data_filter, fc, fs)
+        bI = move_average_overlap_filter(bI_raw)
+        bQ = move_average_overlap_filter(bQ_raw)
+        bphase = get_phase(bI, bQ)
+
+        beamformed_data_filter = butter_bandpass_filter(beamformed_data_2, fc - 150, fc + 150)
+        bI_raw, bQ_raw = get_cos_IQ_raw(beamformed_data_filter, fc, fs)
+        bI = move_average_overlap_filter(bI_raw)
+        bQ = move_average_overlap_filter(bQ_raw)
+        bphase_2 = get_phase(bI, bQ)
+
+        plt.figure()
+        plt.subplot(2, 1, 1)
+        plt.plot(raw_phase[0])
+        plt.subplot(2, 1, 2)
+        plt.plot(bphase_denoised[0])
+        plt.show()
 # # 只用一个麦克风
 # beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\1\240.wav', 48000*1, 48000)
 # a = beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\0\0.wav', 48000*1, 48000)
 # b = beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\0\2.wav', 48000*1+2048, 48000)
+# beamform_on_raw_audio_data(r'D:\projects\pyprojects\gesturerecord\0\1\240.wav')
 # c = b - a
 # plt.pcolormesh(a)
 # plt.show()
@@ -711,7 +787,7 @@ def phasedata_padding_labeling(phasedata_save_dir: str, dataset_save_file, nchan
         if phasedata_save_file.endswith('.npz'):
             data = np.load(phasedata_save_file)
             phase_data = data['phasedata']
-            phase_data = phase_data.reshape((NUM_OF_FREQ * nchannels * 2, -1))
+            phase_data = phase_data.reshape((NUM_OF_FREQ * nchannels * 1, -1))
             phasedata_list.append(phase_data)
             mean_len = mean_len + phase_data.shape[1] / len(phasedata_save_file_names)
             # label
@@ -733,8 +809,8 @@ def phasedata_padding_labeling(phasedata_save_dir: str, dataset_save_file, nchan
         elif detla_len < 0:
             left_zero_padding_len = abs(detla_len) // 2
             right_zero_padding_len = abs(detla_len) - left_zero_padding_len
-            left_zero_padding = np.zeros((NUM_OF_FREQ * nchannels * 2, left_zero_padding_len))
-            right_zero_padding = np.zeros((NUM_OF_FREQ * nchannels * 2, right_zero_padding_len))
+            left_zero_padding = np.zeros((NUM_OF_FREQ * nchannels * 1, left_zero_padding_len))
+            right_zero_padding = np.zeros((NUM_OF_FREQ * nchannels * 1, right_zero_padding_len))
             phasedata_list[i] = np.hstack((left_zero_padding, phasedata_list[i], right_zero_padding))
     phasedata_list = np.array(phasedata_list)
     # phasedata_list_flatten = phasedata_list.reshape((phasedata_list.shape[0], -1))

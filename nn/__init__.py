@@ -3,7 +3,7 @@ import time
 
 from tensorflow.keras import models
 
-from nn.model import cons_cnn_model, train_model, train_model_v2, val_model, cons_depthwise_separable_cnn_model
+from nn.cnn import cons_cnn_model, train_model, train_model_v2, val_model, cons_depthwise_separable_cnn_model
 from nn.preprocess import load_dataset, load_dataset_v2
 import numpy as np
 import tensorflow as tf
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     # x_train, x_test, y_train, y_test = load_dataset_v2(r'../t', 3)
 
     # no_window_training_rawdata(TRAINING_PADDING_FILE, TRAINING_SPLIT_FILE, model_file)
-    no_window_training_splitdata(TRAINING_SPLIT_FILE, model_file)
+    # no_window_training_splitdata(TRAINING_SPLIT_FILE, model_file)
 
     analyze(TRAINING_SPLIT_FILE, model_file, csv_file)
 
