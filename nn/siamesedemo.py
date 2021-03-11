@@ -126,10 +126,11 @@ distance = Lambda(euclidean_distance,
                   output_shape=eucl_dist_output_shape)([processed_a, processed_b])
 
 # model = Model([input_a, input_b], distance)
-model = SiameseNet()
 # tf.keras.utils.plot_model(model, "siamModel.png", show_shapes=True)
 # model.summary()
-
+model = SiameseNet()
+model.build(input_shape=[(None, 28, 28), (None, 28, 28)])
+model.summary()
 # train
 rms = RMSprop()
 model.compile(loss=contrastive_loss, optimizer=rms, metrics=[accuracy])
@@ -137,7 +138,7 @@ history = model.fit([tr_pairs[:, 0], tr_pairs[:, 1]], tr_y,
                     batch_size=128,
                     epochs=epochs, verbose=1,
                     validation_data=([te_pairs[:, 0], te_pairs[:, 1]], te_y))
-model.summary()
+# model.summary()
 plt.figure(figsize=(8, 4))
 plt.subplot(1, 2, 1)
 plot_train_history(history, 'loss', 'val_loss')

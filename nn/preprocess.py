@@ -657,14 +657,7 @@ def beamform_on_raw_audio_data(filename):
         plt.subplot(2, 1, 2)
         plt.plot(bphase_denoised[0])
         plt.show()
-# # 只用一个麦克风
-# beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\1\240.wav', 48000*1, 48000)
-# a = beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\0\0.wav', 48000*1, 48000)
-# b = beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\0\2.wav', 48000*1+2048, 48000)
-# beamform_on_raw_audio_data(r'D:\projects\pyprojects\gesturerecord\0\1\240.wav')
-# c = b - a
-# plt.pcolormesh(a)
-# plt.show()
+
 def extract_magndata_from_audio_special_for_onemic(audio_file, phasedata_save_file, audio_type='wav', mic_array=True):
     origin_data, fs = load_audio_data(audio_file, audio_type)
     fs = fs  # 采样率
@@ -819,7 +812,8 @@ def phasedata_padding_labeling(phasedata_save_dir: str, dataset_save_file, nchan
     np.savez_compressed(dataset_save_file, x=phasedata_list, y=label_list)
 
 
-# 多声道可能有问题
+
+@DeprecationWarning
 def load_dataset(dataset_dir):
     file_names = os.listdir(dataset_dir)
     x_dataset_list = []
@@ -840,6 +834,7 @@ def load_dataset(dataset_dir):
     return x_dataset, y_dataset
 
 
+@DeprecationWarning
 def load_dataset_v2(dataset_dir, num_classes):
     file_names = os.listdir(dataset_dir)
     x_train_list = []
@@ -868,26 +863,13 @@ def load_dataset_v2(dataset_dir, num_classes):
     shuffled_indices = np.random.permutation(x_train.shape[0])
     return x_train[shuffled_indices], x_test, y_train[shuffled_indices], y_test
 
-# load_dataset('../dataset')
-
-# x = []
-# x.append(np.random.randint(1, 10, size=(3,4)))
-# x.append(np.random.randint(1, 10, size=(3,4)))
-# x.append(np.random.randint(1, 10, size=(3,4)))
-# x = np.array(x)
-# print(x)
-# a = np.array(x).reshape((x.shape[0],-1))
-# y = a.reshape((a.shape[0],3,-1))
-# print(np.all(x==y))
-# print(x)
-# y = x.flatten()
-# y = y.reshape((1,-1))
-# print(y)
-# print(y.reshape(x.shape))
-# a = np.random.randint(1, 10, size=(3,4,5))
-# print(a)
-# b = a.reshape((3, -1))
-# print(b)
-# c = b.reshape((b.shape[0], 4, -1))
-# print(c)
-# print(np.all(a==c))
+if __name__ == '__main__':
+    pass
+    # # 只用一个麦克风
+    # beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\1\240.wav', 48000*1, 48000)
+    # a = beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\0\0.wav', 48000*1, 48000)
+    # b = beamform_after_IQ(r'D:\projects\pyprojects\gesturerecord\0\0\2.wav', 48000*1+2048, 48000)
+    # beamform_on_raw_audio_data(r'D:\projects\pyprojects\gesturerecord\0\1\240.wav')
+    # c = b - a
+    # plt.pcolormesh(a)
+    # plt.show()

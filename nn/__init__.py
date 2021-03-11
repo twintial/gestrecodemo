@@ -15,6 +15,7 @@ from pathconfig import *
 num_classes = 10
 
 
+@DeprecationWarning
 def training_first_time():
     x_train, x_test, y_train, y_test = load_dataset_v2(r'../t', num_classes)
     # np.savetxt(r'../dataset/loaded/x_train.txt', x_train.flatten())
@@ -26,6 +27,7 @@ def training_first_time():
     train_model_v2(model, x_train, x_test, y_train, y_test, batch_size=32, epochs=400, save_path='models/1.h5')
 
 
+@DeprecationWarning
 def training_after():
     x_train = np.loadtxt(r'../dataset/loaded/x_train.txt').reshape((-1, 8, 2048, 1))
     x_test = np.loadtxt(r'../dataset/loaded/x_test.txt').reshape((-1, 8, 2048, 1))
@@ -36,19 +38,21 @@ def training_after():
 
 
 def no_window_training_rawdata(rawdata_path, splitdata_path, model_path):
-    dataset = np.load(rawdata_path)
-    x = dataset['x']
-    x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
-    print(x.shape)
-    y = dataset['y']
-    x_train, x_test, y_train, y_test = dataset_split(x, y, ratio=0.8)  # 最好保存一下
-    np.savez_compressed(splitdata_path,
-                        x_train=x_train, x_test=x_test, y_train=y_train, y_test=y_test)
+    # dataset = np.load(rawdata_path)
+    # x = dataset['x']
+    # x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
+    # print(x.shape)
+    # y = dataset['y']
+    # x_train, x_test, y_train, y_test = dataset_split(x, y, ratio=0.8)  # 最好保存一下
+    # np.savez_compressed(splitdata_path,
+    #                     x_train=x_train, x_test=x_test, y_train=y_train, y_test=y_test)
+
+    x_train, x_test, y_train, y_test = data_split_and_save(rawdata_path, splitdata_path)
     print(x_train.shape)
     y_train = tf.keras.utils.to_categorical(y_train, num_classes)
     y_test = tf.keras.utils.to_categorical(y_test, num_classes)
     # model = cons_depthwise_separable_cnn_model(x.shape[1:], num_classes)
-    model = cons_cnn_model(x.shape[1:], num_classes)
+    model = cons_cnn_model(x_train.shape[1:], num_classes)
 
     # time_start = time.time()
     # batch_size 64
@@ -97,7 +101,7 @@ if __name__ == '__main__':
     # x_train, x_test, y_train, y_test = load_dataset_v2(r'../t', 3)
 
     # no_window_training_rawdata(TRAINING_PADDING_FILE, TRAINING_SPLIT_FILE, model_file)
-    # no_window_training_splitdata(TRAINING_SPLIT_FILE, model_file)
+    no_window_training_splitdata(TRAINING_SPLIT_FILE, model_file)
 
     analyze(TRAINING_SPLIT_FILE, model_file, csv_file)
 

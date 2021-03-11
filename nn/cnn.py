@@ -12,20 +12,6 @@ from nn.preprocess import print_history
 
 
 def cons_cnn_model(input_shape, num_classes):
-    # model = Sequential()
-    # model.add(Conv2D(32, kernel_size=(1, 5), strides=(1, 1), activation='relu', input_shape=input_shape))
-    # model.add(AveragePooling2D(pool_size=(2, 2)))
-    # model.add(Conv2D(64, (1, 5), activation='relu'))
-    # model.add(AveragePooling2D(pool_size=(2, 2)))
-    # model.add(Conv2D(128, (1, 5), activation='relu'))
-    # model.add(Flatten())
-    # model.add(Dense(120, activation='relu'))
-    # model.add(Dense(84, activation='relu'))
-    # model.add(Dense(num_classes, activation='softmax'))
-    #
-    # model.compile(loss=keras.losses.categorical_crossentropy,
-    #               optimizer=keras.optimizers.Adam(),
-    #               metrics=['acc'])
     model = Sequential()
     model.add(Conv2D(8,
                      kernel_size=(3, 8),
@@ -70,7 +56,7 @@ def cons_cnn_model(input_shape, num_classes):
 
     model.add(Flatten())
     model.add(Dense(128, activation='relu', bias_initializer=initializers.Constant(value=0.1)))
-    model.add(Dropout(0.5))  # 表示丢弃率
+    model.add(Dropout(0.2))  # 表示丢弃,0.5还行
     model.add(Dense(num_classes, activation='softmax'))
 
     model.compile(loss=losses.categorical_crossentropy,
@@ -138,6 +124,7 @@ def cons_depthwise_separable_cnn_model(input_shape, num_classes):
 # cons_cnn_model(input_shape=(112, 700, 1), num_classes=10)
 
 
+@DeprecationWarning
 def train_model(model: Sequential, x, y, batch_size=32, epochs=100, save_path=None):
     x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=0.8)
     result = model.fit(x_train,
@@ -157,7 +144,7 @@ def train_model_v2(model: Sequential, x_train, x_test, y_train, y_test, batch_si
     #     keras.callbacks.EarlyStopping(monitor='val_acc', baseline=0.85),
     # ]
     # 保存最好模型
-    checkpoint = ModelCheckpoint(save_path, monitor='val_acc', verbose=1, save_best_only=True, mode='max', save_freq='epoch')
+    checkpoint = ModelCheckpoint(save_path, monitor='val_loss', verbose=1, save_best_only=True, mode='min', save_freq='epoch')
     callbacks_list = [checkpoint]
     result = model.fit(x_train,
                        y_train,

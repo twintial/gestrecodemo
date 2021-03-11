@@ -1,4 +1,8 @@
+import random
+
 import numpy as np
+
+from pathconfig import TRAINING_PADDING_FILE, TRAINING_SPLIT_FILE
 
 
 def dataset_split(x: np.ndarray, y: np.ndarray, ratio=0.8):
@@ -80,3 +84,37 @@ def data_split_and_save(rawdata_path, splitdata_path):
     x_train, x_test, y_train, y_test = dataset_split(x, y, ratio=0.8)  # 最好保存一下
     np.savez_compressed(splitdata_path,
                         x_train=x_train, x_test=x_test, y_train=y_train, y_test=y_test)
+    return x_train, x_test, y_train, y_test
+
+
+def pair_data_split_and_save(rawdata_path, splitdata_path):
+    dataset = np.load(rawdata_path)
+    x = dataset['x']
+    x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
+    print(x.shape)
+    y = dataset['y']
+    x_train, x_test, y_train, y_test = dataset_split(x, y, ratio=0.8)
+    num_classes = len(np.unique(y))
+
+    def create_pairs(x, d_i):
+        '''Positive and negative pair creation.
+        Alternates between positive and negative pairs.
+        '''
+        pairs = []
+        labels = []
+        n = min([len(d_i[d]) for d in range(num_classes)]) - 1
+        for d in range(num_classes):
+            for i in range(n):
+                z1, z2 = d_i[d][i], d_i[d][i + 1]
+                pairs += [[x[z1], x[z2]]]
+                inc = random.randrange(1, num_classes)
+                dn = (d + inc) % num_classes
+                z1, z2 = d_i[d][i], d_i[dn][i]
+                pairs += [[x[z1], x[z2]]]
+                labels += [1, 0]
+        return np.array(pairs), np.array(labels)
+    digit_indices_train = [np.where(y_train == i)[0] for i in range(num_classes)]
+    digit_indices_test = [np.where(y_test == i)[0] for i in range(num_classes)]
+    tr_pairs, tr_y = create_pairs(x_train, digit_indices_train)
+    te_pairs, te_y = create_pairs(x_test, digit_indices_test)
+    return tr_pairs, tr_y, te_pairs, te_y, num_classes
