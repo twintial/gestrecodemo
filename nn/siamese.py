@@ -2,11 +2,13 @@ import tensorflow as tf
 from tensorflow.keras import Model, layers
 from tensorflow.keras import backend as K
 
-from nn.util import pair_data_split_and_save
-from pathconfig import TRAINING_PADDING_FILE, TRAINING_SPLIT_FILE
+from nn.util import pair_data_split_and_save, one_shot_pair_data_split_and_save, create_one_shot_pair_data
+from pathconfig import TRAINING_PADDING_FILE, TRAINING_SPLIT_FILE, TEST_PADDING_FILE
 
 import numpy as np
 import matplotlib.pyplot as plt
+
+weights_path = r'models/siamese_weights.h5'
 
 
 def euclidean_distance(vects):
@@ -155,15 +157,14 @@ class SiameseNet(Model):
         distant_output = self.distant([processed_a, processed_b])
         return distant_output
 
-
-if __name__ == '__main__':
+# 将数据pair后放入siamese训练
+def pre_training():
     tr_pairs, tr_y, te_pairs, te_y, num_classes = pair_data_split_and_save(TRAINING_PADDING_FILE, TRAINING_SPLIT_FILE)
     model = SiameseNet(num_classes)
     model.compile(loss=contrastive_loss, optimizer=tf.keras.optimizers.Adam(), metrics=[accuracy])
     history = model.fit([tr_pairs[:, 0], tr_pairs[:, 1]], tr_y,
-              batch_size=32,
-              epochs=1000, verbose=2,
-              validation_data=([te_pairs[:, 0], te_pairs[:, 1]], te_y))
+                        batch_size=32, epochs=1000, verbose=2,
+                        validation_data=([te_pairs[:, 0], te_pairs[:, 1]], te_y))
     # model.summary()
     plt.figure(figsize=(8, 4))
     plt.subplot(1, 2, 1)
@@ -180,3 +181,59 @@ if __name__ == '__main__':
 
     print('* Accuracy on training set: %0.2f%%' % (100 * tr_acc))
     print('* Accuracy on test set: %0.2f%%' % (100 * te_acc))
+
+    model.save_weights(weights_path)
+
+# 选择一个手势来做
+def one_shot_training():
+    gesture_code = 8
+    one_shot_weights_path = rf'models/one_shot_{gesture_code}_weights.h5'
+    tr_pairs, tr_y, te_pairs, te_y, num_classes = one_shot_pair_data_split_and_save(TRAINING_PADDING_FILE,
+                                                                                    TRAINING_SPLIT_FILE, gesture_code)
+    model = SiameseNet(num_classes)
+    model.build(input_shape=[(None, 56, 777, 1), (None, 56, 777, 1)])
+    model.load_weights(weights_path)
+    model.compile(loss=contrastive_loss, optimizer=tf.keras.optimizers.Adam(), metrics=[accuracy])
+
+    loss, acc = model.evaluate([tr_pairs[:, 0], tr_pairs[:, 1]], tr_y)
+
+
+    history = model.fit([tr_pairs[:, 0], tr_pairs[:, 1]], tr_y,
+                        batch_size=32, epochs=100, verbose=2,
+                        validation_data=([te_pairs[:, 0], te_pairs[:, 1]], te_y))
+    # model.summary()
+    plt.figure(figsize=(8, 4))
+    plt.subplot(1, 2, 1)
+    plot_train_history(history, 'loss', 'val_loss')
+    plt.subplot(1, 2, 2)
+    plot_train_history(history, 'accuracy', 'val_accuracy')
+    plt.show()
+
+    # compute final accuracy on training and test sets
+    y_pred = model.predict([tr_pairs[:, 0], tr_pairs[:, 1]])
+    tr_acc = compute_accuracy(tr_y, y_pred)
+    y_pred = model.predict([te_pairs[:, 0], te_pairs[:, 1]])
+    te_acc = compute_accuracy(te_y, y_pred)
+    print('loss on training set before one shot training: %0.6f' % loss)
+    print('accuracy on training set before one shot training: %0.2f%%' % acc)
+    print('* Accuracy on training set: %0.2f%%' % (100 * tr_acc))
+    print('* Accuracy on test set: %0.2f%%' % (100 * te_acc))
+
+    model.save_weights(one_shot_weights_path)
+def one_shot_eval():
+    gesture_code = 8
+    one_shot_weights_path = rf'models/one_shot_{gesture_code}_weights.h5'
+    pairs, labels, num_classes = create_one_shot_pair_data(TEST_PADDING_FILE, None, gesture_code, balanced=False)
+    model = SiameseNet(num_classes)
+    model.build(input_shape=[(None, 56, 777, 1), (None, 56, 777, 1)])
+    model.load_weights(one_shot_weights_path)
+    model.compile(loss=contrastive_loss, optimizer=tf.keras.optimizers.Adam(), metrics=[accuracy])
+    loss, acc = model.evaluate([pairs[:, 0], pairs[:, 1]], labels)
+    print('loss: %0.6f' % loss)
+    print('accuracy: %0.2f%%' % acc)
+
+if __name__ == '__main__':
+    np.random.seed(1123)
+    # pre_training()
+    # one_shot_training()
+    one_shot_eval()

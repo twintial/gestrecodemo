@@ -1,10 +1,18 @@
 import random
 
 import numpy as np
-
+import sklearn
+from sklearn.model_selection import train_test_split
 from pathconfig import TRAINING_PADDING_FILE, TRAINING_SPLIT_FILE
 
 
+def normalize_max_min(x, axis=0):
+    max = np.max(x, axis=axis, keepdims=True)
+    min = np.min(x, axis=axis, keepdims=True)
+    return (x - min) / (max - min)
+
+
+# 不通用，不是随机打乱，以均衡为主
 def dataset_split(x: np.ndarray, y: np.ndarray, ratio=0.8):
     x_train = []
     y_train = []
@@ -78,6 +86,7 @@ def dataset_split_two_dataset(random_index, train_random, test_random, x: np.nda
 def data_split_and_save(rawdata_path, splitdata_path):
     dataset = np.load(rawdata_path)
     x = dataset['x']
+    x = normalize_max_min(x, axis=2)
     x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
     print(x.shape)
     y = dataset['y']
@@ -90,6 +99,7 @@ def data_split_and_save(rawdata_path, splitdata_path):
 def pair_data_split_and_save(rawdata_path, splitdata_path):
     dataset = np.load(rawdata_path)
     x = dataset['x']
+    x = normalize_max_min(x, axis=2)
     x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
     print(x.shape)
     y = dataset['y']
@@ -117,4 +127,55 @@ def pair_data_split_and_save(rawdata_path, splitdata_path):
     digit_indices_test = [np.where(y_test == i)[0] for i in range(num_classes)]
     tr_pairs, tr_y = create_pairs(x_train, digit_indices_train)
     te_pairs, te_y = create_pairs(x_test, digit_indices_test)
+    return tr_pairs, tr_y, te_pairs, te_y, num_classes
+
+def create_one_shot_pair_data(rawdata_path, splitdata_path, gesture_code, balanced=True):
+    dataset = np.load(rawdata_path)
+    x = dataset['x']
+    x = normalize_max_min(x, axis=2)
+    x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
+    print(x.shape)
+    y = dataset['y']
+    num_classes = len(np.unique(y))
+    if gesture_code >= num_classes:
+        raise ValueError('gesture don\'t exist')
+    digit_indices_main = np.where(y == gesture_code)[0]
+    digit_indices_other = np.where(y != gesture_code)[0]
+    x_main = x[digit_indices_main]
+    x_other = x[digit_indices_other]
+    # pair, keep positive and negative samples balanced
+    def create_pairs(x_m, x_other):
+        '''Positive and negative pair creation.
+        Alternates between positive and negative pairs.
+        '''
+        positive_pairs = []
+        positive_labels = []
+        negative_pairs = []
+        negative_labels = []
+        # positive samples
+        for i in range(x_m.shape[0]):
+            for j in range(i):
+                positive_pairs.append([x_m[i], x_m[j]])
+                positive_labels.append(1)
+            for j in range(x_other.shape[0]):
+                negative_pairs.append([x_m[i], x_other[j]])
+                negative_labels.append(0)
+        positive_pairs = np.array(positive_pairs)
+        positive_labels = np.array(positive_labels)
+        negative_pairs = np.array(negative_pairs)
+        negative_labels = np.array(negative_labels)
+        # 均衡正负样本
+        if balanced:
+            random_indice = np.random.permutation(len(negative_labels))
+            negative_pairs = negative_pairs[random_indice[:len(positive_labels)]]
+            negative_labels = negative_labels[random_indice[:len(positive_labels)]]
+
+        pairs = np.concatenate((positive_pairs, negative_pairs), axis=0)
+        labels = np.concatenate((positive_labels, negative_labels))
+        return pairs, labels
+    pairs, labels = create_pairs(x_main, x_other)
+    return pairs, labels, num_classes
+def one_shot_pair_data_split_and_save(rawdata_path, splitdata_path, gesture_code):
+    pairs, labels, num_classes = create_one_shot_pair_data(rawdata_path, splitdata_path, gesture_code, balanced=True)
+    tr_pairs, te_pairs, tr_y, te_y = train_test_split(pairs, labels, test_size=0.2, random_state=1123)
     return tr_pairs, tr_y, te_pairs, te_y, num_classes
