@@ -63,7 +63,6 @@ class BaseNet(Model):
         x = self.dropout2(x)
         return self.dense3(x)
 
-
 class BaseCnnNet(Model):
     def __init__(self, num_classes):
         super(BaseCnnNet, self).__init__()
@@ -185,8 +184,7 @@ def pre_training():
     model.save_weights(weights_path)
 
 # 选择一个手势来做
-def one_shot_training():
-    gesture_code = 8
+def one_shot_training(gesture_code):
     one_shot_weights_path = rf'models/one_shot_{gesture_code}_weights.h5'
     tr_pairs, tr_y, te_pairs, te_y, num_classes = one_shot_pair_data_split_and_save(TRAINING_PADDING_FILE,
                                                                                     TRAINING_SPLIT_FILE, gesture_code)
@@ -220,8 +218,8 @@ def one_shot_training():
     print('* Accuracy on test set: %0.2f%%' % (100 * te_acc))
 
     model.save_weights(one_shot_weights_path)
-def one_shot_eval():
-    gesture_code = 8
+
+def one_shot_eval(gesture_code):
     one_shot_weights_path = rf'models/one_shot_{gesture_code}_weights.h5'
     pairs, labels, num_classes = create_one_shot_pair_data(TEST_PADDING_FILE, None, gesture_code, balanced=False)
     model = SiameseNet(num_classes)
@@ -235,5 +233,5 @@ def one_shot_eval():
 if __name__ == '__main__':
     np.random.seed(1123)
     # pre_training()
-    # one_shot_training()
-    one_shot_eval()
+    # one_shot_training(8)
+    one_shot_eval(8)
