@@ -56,7 +56,7 @@ def no_window_training_rawdata(rawdata_path, splitdata_path, model_path):
 
     # time_start = time.time()
     # batch_size 64/32
-    train_model_v2(model, x_train, x_test, y_train, y_test, batch_size=32, epochs=100, save_path=model_path)
+    train_model_v2(model, x_train, x_test, y_train, y_test, batch_size=32, epochs=1000, save_path=model_path)
     # time_end = time.time()
     # print('totally cost', time_end - time_start)
     # val_model(model, x_test, y_test, num_classes)
@@ -105,7 +105,7 @@ if __name__ == '__main__':
     # 另一组数据的评估 evaluate new data
     dataset = np.load(TEST_PADDING_FILE)
     x = dataset['x']
-    x = normalize_max_min(x, axis=2)  # 正则化
+    x = normalize_max_min(x, axis=2)  # 归一化
     x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
     print(x.shape)
     y = dataset['y']

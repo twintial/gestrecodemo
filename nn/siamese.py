@@ -234,5 +234,5 @@ def one_shot_eval(gesture_code):
 if __name__ == '__main__':
     np.random.seed(1123)
     # pre_training()
-    one_shot_training(2)
-    one_shot_eval(2)
+    # one_shot_training(2)
+    one_shot_eval(7)

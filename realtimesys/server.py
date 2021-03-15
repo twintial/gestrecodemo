@@ -28,8 +28,8 @@ if __name__ == '__main__':
     address = ('127.0.0.1', 31500)
     print('wait for connect')
     recorder = Record(address)
-    # 用麦克风阵列的音箱，超过20s就会有异响 12 4
-    recorder.set_param(12, 4, 8, os.path.join(os.getcwd(), 'test.wav'))
+    # 用麦克风阵列的音箱，超过20s就会有异响 ump-8:12 4 8/电脑:0 2 2
+    recorder.set_param(0, 2, 2, os.path.join(os.getcwd(), 'test.wav'))
     recorder.play_and_record(r'sinusoid2.wav')
     time.sleep(t)
     recorder.stop()

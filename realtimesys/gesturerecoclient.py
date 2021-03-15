@@ -15,19 +15,20 @@ STEP = 350
 model_file = r'D:\projects\pyprojects\gestrecodemo\nn\models\mic_speaker_phase_234_5.h5'
 model: models.Sequential = models.load_model(model_file)
 
-def gesture_detection_multithread(gesture_frames):
-    t1 = time.time()
+def gesture_reco_detection_multithread(gesture_frames):
 
     '''
     可以做到config中去
     '''
-    N_CHANNELS = 7
+    N_CHANNELS = 2
     DELAY_TIME = 1
     NUM_OF_FREQ = 8
     F0 = 17000
     STEP = 350  # 每个频率的跨度
     fs = 48000
     period = 10
+
+    ts_1 = time.time()
 
     unwrapped_phase_list = [None] * NUM_OF_FREQ * 2
 
@@ -64,11 +65,17 @@ def gesture_detection_multithread(gesture_frames):
         unwrapped_phase_list[2*i+1] = (np.diff(np.diff(unwrapped_phase)))
     with ThreadPoolExecutor(max_workers=8) as pool:
         pool.map(get_phase_and_diff, [i for i in range(NUM_OF_FREQ)])
+    te_1 = time.time()
+    print(f"time of getting phase:{ts_1-te_1}")
+
+    ts_2 = time.time()
 
     merged_u_p = np.array(unwrapped_phase_list).reshape((NUM_OF_FREQ * N_CHANNELS * 2, -1))
+
     # 仿造（之后删除）
-    # merged_u_p = np.tile(merged_u_p, (3,1))
-    # merged_u_p = np.vstack((merged_u_p, merged_u_p[:16, :]))
+    merged_u_p = np.tile(merged_u_p, (3,1))
+    merged_u_p = np.vstack((merged_u_p, merged_u_p[:16, :]))
+
     mean_len = 777  # 之后要改
     # 这里补0的策略可能要改
     detla_len = merged_u_p.shape[1] - mean_len
@@ -80,15 +87,20 @@ def gesture_detection_multithread(gesture_frames):
         left_zero_padding = np.zeros((NUM_OF_FREQ * 7 * 2, left_zero_padding_len))
         right_zero_padding = np.zeros((NUM_OF_FREQ * 7 * 2, right_zero_padding_len))
         merged_u_p = np.hstack((left_zero_padding, merged_u_p, right_zero_padding))
+    te_2 = time.time()
+    print(f"time of padding:{ts_2-te_2}")
+
+    ts_3 = time.time()
     y_predict = model.predict(merged_u_p.reshape((1, merged_u_p.shape[0], merged_u_p.shape[1], 1)))
     label = ['握紧', '张开', '左滑', '右滑', '上滑', '下滑', '前推', '后推', '顺时针转圈', '逆时针转圈']
     print(np.argmax(y_predict[0]))
     print(label[np.argmax(y_predict[0])])
-    t2 = time.time()
-    print(f"use time:{t2-t1}")
+
+    te_3 = time.time()
+    print(f"time of prediction:{ts_3-te_3}")
 
 if __name__ == '__main__':
-    channels = 8
+    channels = 2
     frame_count = 2048
     frames_int = None
 
@@ -106,15 +118,16 @@ if __name__ == '__main__':
     higher_than_threshold_count = 0  # 超过3次即运动开始
     pre_frame = 2
 
-    # 画图参数
-    # fig, ax = plt.subplots()
-    # # ax.set_xlim([0, 48000])
-    # # ax.set_ylim([-2, 0])
+
     phase = [None] * max_frame
-    # l_phase, = ax.plot(phase)
-    # motion_start_line = ax.axvline(0, color='r')
-    # motion_stop_line = ax.axvline(0, color='g')
-    # plt.pause(0.01)
+    # 画图参数
+    fig, ax = plt.subplots()
+    # ax.set_xlim([0, 48000])
+    # ax.set_ylim([-2, 0])
+    l_phase, = ax.plot(phase)
+    motion_start_line = ax.axvline(0, color='r')
+    motion_stop_line = ax.axvline(0, color='g')
+    plt.pause(0.01)
 
     # socket
     address = ('127.0.0.1', 31500)
@@ -148,6 +161,7 @@ if __name__ == '__main__':
 
             # 运动判断
             std = np.std(unwrapped_phase[0])
+            print(std)
             # 为了截取运动部分
             if motion_start:
                 motion_start_index_constant -= frame_count
@@ -167,7 +181,7 @@ if __name__ == '__main__':
                         # 运动停止，手势判断
                         gesture_frames_len = motion_stop_index - motion_start_index_constant
                         gesture_frames = frames_int[:, -gesture_frames_len:]
-                        threading.Thread(target=gesture_detection_multithread, args=(gesture_frames[:7],)).start()
+                        threading.Thread(target=gesture_reco_detection_multithread, args=(gesture_frames[:7],)).start()
                 else:
                     lower_than_threshold_count = 0
             else:
@@ -183,13 +197,13 @@ if __name__ == '__main__':
                     higher_than_threshold_count = 0
 
             # 画图
-            # motion_start_line.set_xdata(motion_start_index)
-            # motion_stop_line.set_xdata(motion_stop_index)
-            # l_phase.set_ydata(phase)
-            # ax.relim()
-            # ax.autoscale()
-            # ax.figure.canvas.draw()
-            # plt.pause(0.001)
+            motion_start_line.set_xdata(motion_start_index)
+            motion_stop_line.set_xdata(motion_stop_index)
+            l_phase.set_ydata(phase)
+            ax.relim()
+            ax.autoscale()
+            ax.figure.canvas.draw()
+            plt.pause(0.001)
             offset += frame_count
             # # 不一定好，暂时先这样
             # if offset > max_frame:
