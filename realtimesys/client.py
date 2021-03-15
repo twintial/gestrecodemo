@@ -70,6 +70,7 @@ def gesture_detection_multithread(gesture_frames):
     # merged_u_p = np.tile(merged_u_p, (3,1))
     # merged_u_p = np.vstack((merged_u_p, merged_u_p[:16, :]))
     mean_len = 777  # 之后要改
+    # 这里补0的策略可能要改
     detla_len = merged_u_p.shape[1] - mean_len
     if detla_len > 0:
         merged_u_p = merged_u_p[:, detla_len:]

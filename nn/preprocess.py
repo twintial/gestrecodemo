@@ -138,7 +138,16 @@ def generate_training_data_pcm(audio_file, dataset_save_file):
 
 
 # 使用整个的方法
+
 def extract_phasedata_from_audio(audio_file, phasedata_save_file, audio_type='pcm', mic_array=False):
+    '''
+    目前使用的是对相位取一次差分
+    :param audio_file:
+    :param phasedata_save_file:
+    :param audio_type:
+    :param mic_array:
+    :return:
+    '''
     origin_data, fs = load_audio_data(audio_file, audio_type)
     fs = fs  # 采样率
     # data = origin_data[int(fs * DELAY_TIME):]
@@ -771,6 +780,14 @@ def extract_phasedata_from_audio_special_for_onemic(audio_file, phasedata_save_f
 
 
 def phasedata_padding_labeling(phasedata_save_dir: str, dataset_save_file, nchannels, mean_len_method='auto'):
+    '''
+    目前使用的是对相位取一次差分
+    :param phasedata_save_dir:
+    :param dataset_save_file:
+    :param nchannels:
+    :param mean_len_method:
+    :return:
+    '''
     phasedata_save_file_names = os.listdir(phasedata_save_dir)
     phasedata_list = []
     label_list = []
@@ -810,6 +827,7 @@ def phasedata_padding_labeling(phasedata_save_dir: str, dataset_save_file, nchan
     label_list = np.array(label_list)
 
     np.savez_compressed(dataset_save_file, x=phasedata_list, y=label_list)
+    return mean_len
 
 
 

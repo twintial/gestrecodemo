@@ -138,6 +138,7 @@ class BaseCnnNet(Model):
         x = self.relu_5(x)
         x = self.max_pooling2d_5(x)
 
+        # 这里有问题
         x = self.flatten(x)
         x = self.dense1(x)
         x = self.dropout(x)
@@ -233,5 +234,5 @@ def one_shot_eval(gesture_code):
 if __name__ == '__main__':
     np.random.seed(1123)
     # pre_training()
-    # one_shot_training(8)
-    one_shot_eval(8)
+    one_shot_training(2)
+    one_shot_eval(2)

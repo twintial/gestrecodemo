@@ -144,7 +144,7 @@ def train_model_v2(model: Sequential, x_train, x_test, y_train, y_test, batch_si
     #     keras.callbacks.EarlyStopping(monitor='val_acc', baseline=0.85),
     # ]
     # 保存最好模型
-    checkpoint = ModelCheckpoint(save_path, monitor='val_loss', verbose=1, save_best_only=True, mode='min', save_freq='epoch')
+    checkpoint = ModelCheckpoint(save_path, monitor='val_acc', verbose=2, save_best_only=True, mode='max', save_freq='epoch')
     callbacks_list = [checkpoint]
     result = model.fit(x_train,
                        y_train,
@@ -152,7 +152,7 @@ def train_model_v2(model: Sequential, x_train, x_test, y_train, y_test, batch_si
                        epochs=epochs,
                        validation_data=(x_test, y_test),
                        callbacks=callbacks_list,
-                       verbose=1)
+                       verbose=2)
     # if save_path:
     #     model.save(save_path)
     # print_history(result.history)

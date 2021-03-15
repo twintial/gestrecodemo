@@ -1,6 +1,6 @@
 import os
 
-EXPERIMENT_NAME = r'mic_speaker_phase_234_56_diff'  # only need to change this val
+EXPERIMENT_NAME = r'mic_speaker_phase_234_5_diff'  # only need to change this val
 
 PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -30,7 +30,7 @@ TRAINING_SPLIT_FILE = os.path.join(TRAINING_DATA_DIR, r'split', r'splitdata.npz'
 TEST_AUDIO_DIRS = [
     # r'D:\projects\pyprojects\soundphase\gest\sjj\gesture4',
     r'D:\实验数据\2021\毕设\micarrayspeaker\sjj\gesture5',
-    r'D:\实验数据\2021\毕设\micarrayspeaker\sjj\gesture6',
+    # r'D:\实验数据\2021\毕设\micarrayspeaker\sjj\gesture6',
     # r'D:\实验数据\2021\毕设\distant_mic\sjj\gesture2'
 ]
 TEST_DATA_DIR = os.path.join(BASE_DIR, EXPERIMENT_NAME, r'test')

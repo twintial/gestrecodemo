@@ -8,7 +8,7 @@ from nn.preprocess import load_dataset, load_dataset_v2
 import numpy as np
 import tensorflow as tf
 
-from nn.util import dataset_split, data_split_and_save
+from nn.util import dataset_split, data_split_and_save, normalize_max_min
 
 from pathconfig import *
 
@@ -55,8 +55,8 @@ def no_window_training_rawdata(rawdata_path, splitdata_path, model_path):
     model = cons_cnn_model(x_train.shape[1:], num_classes)
 
     # time_start = time.time()
-    # batch_size 64
-    train_model_v2(model, x_train, x_test, y_train, y_test, batch_size=32, epochs=1000, save_path=model_path)
+    # batch_size 64/32
+    train_model_v2(model, x_train, x_test, y_train, y_test, batch_size=32, epochs=100, save_path=model_path)
     # time_end = time.time()
     # print('totally cost', time_end - time_start)
     # val_model(model, x_test, y_test, num_classes)
@@ -87,9 +87,6 @@ def analyze(splitdata_path, model_file, csv_file):
     val_model(model, x_test, y_test, num_classes, csv_file)
 
 
-
-
-
 if __name__ == '__main__':
     model_file = rf'models/{EXPERIMENT_NAME}.h5'
     csv_file = r'val.csv'
@@ -100,17 +97,18 @@ if __name__ == '__main__':
     # training_first_time()
     # x_train, x_test, y_train, y_test = load_dataset_v2(r'../t', 3)
 
-    # no_window_training_rawdata(TRAINING_PADDING_FILE, TRAINING_SPLIT_FILE, model_file)
-    no_window_training_splitdata(TRAINING_SPLIT_FILE, model_file)
+    no_window_training_rawdata(TRAINING_PADDING_FILE, TRAINING_SPLIT_FILE, model_file)
+    # no_window_training_splitdata(TRAINING_SPLIT_FILE, model_file)
 
     analyze(TRAINING_SPLIT_FILE, model_file, csv_file)
 
     # 另一组数据的评估 evaluate new data
     dataset = np.load(TEST_PADDING_FILE)
     x = dataset['x']
+    x = normalize_max_min(x, axis=2)  # 正则化
     x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
     print(x.shape)
     y = dataset['y']
     y = tf.keras.utils.to_categorical(y, num_classes)
-    model = models.load_model(model_file)
+    model: tf.keras.Model = models.load_model(model_file)
     val_model(model, x, y, num_classes, 'new.csv')
