@@ -66,7 +66,7 @@ def gesture_reco_detection_multithread(gesture_frames):
     with ThreadPoolExecutor(max_workers=8) as pool:
         pool.map(get_phase_and_diff, [i for i in range(NUM_OF_FREQ)])
     te_1 = time.time()
-    print(f"time of getting phase:{ts_1-te_1}")
+    print(f"time of getting phase:{te_1-ts_1}")  # 主要的时间开销， 0.2-0.4s
 
     ts_2 = time.time()
 
@@ -88,7 +88,7 @@ def gesture_reco_detection_multithread(gesture_frames):
         right_zero_padding = np.zeros((NUM_OF_FREQ * 7 * 2, right_zero_padding_len))
         merged_u_p = np.hstack((left_zero_padding, merged_u_p, right_zero_padding))
     te_2 = time.time()
-    print(f"time of padding:{ts_2-te_2}")
+    print(f"time of padding:{te_2-ts_2}") # 几乎没有用时
 
     ts_3 = time.time()
     y_predict = model.predict(merged_u_p.reshape((1, merged_u_p.shape[0], merged_u_p.shape[1], 1)))
@@ -97,7 +97,7 @@ def gesture_reco_detection_multithread(gesture_frames):
     print(label[np.argmax(y_predict[0])])
 
     te_3 = time.time()
-    print(f"time of prediction:{ts_3-te_3}")
+    print(f"time of prediction:{te_3-ts_3}") # 0.05
 
 if __name__ == '__main__':
     channels = 2
@@ -109,7 +109,7 @@ if __name__ == '__main__':
     max_frame = 48000  # 对延迟影响很大
 
     # 运动检测参数
-    THRESHOLD = 0.008  # 运动判断阈值
+    THRESHOLD = 0.008  # 运动判断阈值0.008
     motion_start_index = -1
     motion_start_index_constant = -1  # 为了截取运动片段
     motion_stop_index = -1
@@ -161,7 +161,7 @@ if __name__ == '__main__':
 
             # 运动判断
             std = np.std(unwrapped_phase[0])
-            print(std)
+            # print(std)
             # 为了截取运动部分
             if motion_start:
                 motion_start_index_constant -= frame_count
@@ -204,6 +204,7 @@ if __name__ == '__main__':
             ax.autoscale()
             ax.figure.canvas.draw()
             plt.pause(0.001)
+
             offset += frame_count
             # # 不一定好，暂时先这样
             # if offset > max_frame:

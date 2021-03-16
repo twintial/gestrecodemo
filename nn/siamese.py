@@ -3,12 +3,12 @@ from tensorflow.keras import Model, layers
 from tensorflow.keras import backend as K
 
 from nn.util import pair_data_split_and_save, one_shot_pair_data_split_and_save, create_one_shot_pair_data
-from pathconfig import TRAINING_PADDING_FILE, TRAINING_SPLIT_FILE, TEST_PADDING_FILE
+from pathconfig import TRAINING_PADDING_FILE, TRAINING_SPLIT_FILE, TEST_PADDING_FILE, EXPERIMENT_NAME
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-weights_path = r'models/siamese_weights.h5'
+weights_path = rf'models/{EXPERIMENT_NAME}_siamese_weights.h5'
 
 
 def euclidean_distance(vects):
@@ -111,6 +111,7 @@ class BaseCnnNet(Model):
         self.dense1 = layers.Dense(128, activation='relu', bias_initializer=tf.initializers.Constant(value=0.1))
         self.dropout = layers.Dropout(0.2)
         self.dense2 = layers.Dense(num_classes, activation='softmax')
+        # self.dense2 = layers.Dense(128, activation='relu')
 
     def call(self, inputs, training=None, mask=None):
         x = self.conv2d_1(inputs)
@@ -234,5 +235,5 @@ def one_shot_eval(gesture_code):
 if __name__ == '__main__':
     np.random.seed(1123)
     # pre_training()
-    # one_shot_training(2)
-    one_shot_eval(7)
+    # one_shot_training(0)
+    one_shot_eval(6)

@@ -16,8 +16,8 @@ from pathconfig import TRAINING_PADDING_FILE
 F0 = 17000
 STEP = 350
 num_classes = 10
-gesture_code = 0
-model_weight_file = rf'models/one_shot_{gesture_code}_weights.h5'
+gesture_code = 6
+model_weight_file = rf'D:/projects/pyprojects/gestrecodemo/nn/models/one_shot_{gesture_code}_weights.h5'
 model = SiameseNet(num_classes)
 model.build(input_shape=[(None, 56, 777, 1), (None, 56, 777, 1)])
 model.load_weights(model_weight_file)
@@ -62,7 +62,7 @@ def gesture_wake_detection_multithread(gesture_frames):
     fs = 48000
     period = 10
 
-    unwrapped_phase_list = [None] * NUM_OF_FREQ * 2
+    unwrapped_phase_list = [None] * NUM_OF_FREQ
 
     def get_phase_and_diff(i):
         fc = F0 + i * STEP
@@ -93,14 +93,15 @@ def gesture_wake_detection_multithread(gesture_frames):
         # plt.show()
         assert unwrapped_phase.shape[1] > 1
         # 用diff，和两次diff
-        unwrapped_phase_list[2*i] = np.diff(unwrapped_phase)[:, :-1]
-        unwrapped_phase_list[2*i+1] = (np.diff(np.diff(unwrapped_phase)))
+        unwrapped_phase_list[i] = np.diff(unwrapped_phase)[:, :-1]
+        # unwrapped_phase_list[2*i+1] = (np.diff(np.diff(unwrapped_phase)))
     with ThreadPoolExecutor(max_workers=8) as pool:
         pool.map(get_phase_and_diff, [i for i in range(NUM_OF_FREQ)])
-    merged_u_p = np.array(unwrapped_phase_list).reshape((NUM_OF_FREQ * N_CHANNELS * 2, -1))
+    merged_u_p = np.array(unwrapped_phase_list).reshape((NUM_OF_FREQ * N_CHANNELS * 1, -1))
     # 仿造（之后删除）
     # merged_u_p = np.tile(merged_u_p, (3,1))
-    # merged_u_p = np.vstack((merged_u_p, merged_u_p[:16, :]))
+    # merged_u_p = np.vstack((merged_u_p, merged_u_p[:8, :]))
+
     mean_len = 777  # 之后要改
     # 这里补0的策略可能要改
     detla_len = merged_u_p.shape[1] - mean_len
@@ -109,16 +110,19 @@ def gesture_wake_detection_multithread(gesture_frames):
     elif detla_len < 0:
         left_zero_padding_len = abs(detla_len) // 2
         right_zero_padding_len = abs(detla_len) - left_zero_padding_len
-        left_zero_padding = np.zeros((NUM_OF_FREQ * 7 * 2, left_zero_padding_len))
-        right_zero_padding = np.zeros((NUM_OF_FREQ * 7 * 2, right_zero_padding_len))
+        left_zero_padding = np.zeros((NUM_OF_FREQ * 7 * 1, left_zero_padding_len))
+        right_zero_padding = np.zeros((NUM_OF_FREQ * 7 * 1, right_zero_padding_len))
         merged_u_p = np.hstack((left_zero_padding, merged_u_p, right_zero_padding))
     # 归一化，检查一下对不对
     merged_u_p = normalize_max_min(merged_u_p, axis=1)
-    input_gesture = merged_u_p.reshape((1, merged_u_p.shape[0], merged_u_p.shape[1], 1))
+    input_gesture = merged_u_p.reshape((merged_u_p.shape[0], merged_u_p.shape[1], 1))
+    print(input_gesture.shape)
     input_pairs = get_pair(wake_gesture_data, input_gesture)
-    y_predict = model.predict(input_pairs)
+    print(input_pairs.shape)
+    y_predict = model.predict([input_pairs[:, 0], input_pairs[:, 1]])
 
     dist = np.mean(y_predict)
+    print(dist)
     if dist < 0.5:
         print("\033[1;31m wake gesture\033[0m")
     else:
@@ -146,15 +150,16 @@ def run():
     higher_than_threshold_count = 0  # 超过3次即运动开始
     pre_frame = 2
 
-    # 画图参数
-    # fig, ax = plt.subplots()
-    # # ax.set_xlim([0, 48000])
-    # # ax.set_ylim([-2, 0])
+
     phase = [None] * max_frame
-    # l_phase, = ax.plot(phase)
-    # motion_start_line = ax.axvline(0, color='r')
-    # motion_stop_line = ax.axvline(0, color='g')
-    # plt.pause(0.01)
+    # 画图参数
+    fig, ax = plt.subplots()
+    # ax.set_xlim([0, 48000])
+    # ax.set_ylim([-2, 0])
+    l_phase, = ax.plot(phase)
+    motion_start_line = ax.axvline(0, color='r')
+    motion_stop_line = ax.axvline(0, color='g')
+    plt.pause(0.01)
 
     # socket
     address = ('127.0.0.1', 31500)
@@ -223,13 +228,14 @@ def run():
                     higher_than_threshold_count = 0
 
             # 画图
-            # motion_start_line.set_xdata(motion_start_index)
-            # motion_stop_line.set_xdata(motion_stop_index)
-            # l_phase.set_ydata(phase)
-            # ax.relim()
-            # ax.autoscale()
-            # ax.figure.canvas.draw()
-            # plt.pause(0.001)
+            motion_start_line.set_xdata(motion_start_index)
+            motion_stop_line.set_xdata(motion_stop_index)
+            l_phase.set_ydata(phase)
+            ax.relim()
+            ax.autoscale()
+            ax.figure.canvas.draw()
+            plt.pause(0.001)
+
             offset += frame_count
             # # 不一定好，暂时先这样
             # if offset > max_frame:
