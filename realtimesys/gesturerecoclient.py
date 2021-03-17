@@ -34,7 +34,10 @@ def gesture_reco_detection_multithread(gesture_frames):
 
     def get_phase_and_diff(i):
         fc = F0 + i * STEP
+        ts = time.time()
         data_filter = butter_bandpass_filter(gesture_frames, fc - 150, fc + 150)
+        te = time.time()
+        print(f"time of getting phase:{ts - te}")  # 主要的时间开销， 0.2-0.4s
         I_raw, Q_raw = get_cos_IQ_raw(data_filter, fc, fs)
         # 滤波+下采样
         I = move_average_overlap_filter(I_raw)
@@ -68,8 +71,6 @@ def gesture_reco_detection_multithread(gesture_frames):
     te_1 = time.time()
     print(f"time of getting phase:{te_1-ts_1}")  # 主要的时间开销， 0.2-0.4s
 
-    ts_2 = time.time()
-
     merged_u_p = np.array(unwrapped_phase_list).reshape((NUM_OF_FREQ * N_CHANNELS * 2, -1))
 
     # 仿造（之后删除）
@@ -87,8 +88,6 @@ def gesture_reco_detection_multithread(gesture_frames):
         left_zero_padding = np.zeros((NUM_OF_FREQ * 7 * 2, left_zero_padding_len))
         right_zero_padding = np.zeros((NUM_OF_FREQ * 7 * 2, right_zero_padding_len))
         merged_u_p = np.hstack((left_zero_padding, merged_u_p, right_zero_padding))
-    te_2 = time.time()
-    print(f"time of padding:{te_2-ts_2}") # 几乎没有用时
 
     ts_3 = time.time()
     y_predict = model.predict(merged_u_p.reshape((1, merged_u_p.shape[0], merged_u_p.shape[1], 1)))
@@ -149,6 +148,7 @@ if __name__ == '__main__':
             # 前后都多拿一个CHUNK
             data_segment = frames_int[:, -3 * frame_count:]
             # 运动检测+画图，只取一个freq
+            # 可以改进，这里最后只用了一个mic，可以不用都处理
             fc = F0
             data_filter = butter_bandpass_filter(data_segment, fc - 150, fc + 150)
             I_raw, Q_raw = get_cos_IQ_raw_offset(data_filter, fc, offset)
