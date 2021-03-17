@@ -55,7 +55,7 @@ def get_steering_vector(pos_i, pos_j, c, dvec):
     return (-dist.T / c).reshape(-1)  # 这个负号要不要?
 
 
-def theta2vector(theta, r=1):
+def theta2vec(theta, r=1):
     # vectors = np.zeros((theta.shape[0], 3))
     # vectors[:, 0] = r*np.cos(theta[:, 1])*np.cos(theta[:, 0])
     # vectors[:, 1] = r*np.cos(theta[:, 1])*np.sin(theta[:, 0])
@@ -67,6 +67,13 @@ def theta2vector(theta, r=1):
              r * np.cos(t[1]) * np.sin(t[0]),
              r * np.sin(t[1])])
     return vectors
+def vec2theta(vec):
+    vec = np.array(vec)
+    r = np.linalg.norm(vec[0])
+    theta = np.zeros((vec.shape[0], 2))
+    theta[:, 0] = np.arctan2(vec[:, 1], vec[:, 0])
+    theta[:, 1] = np.arcsin(vec[:, 2]/r)
+    return theta
 
 
 def create_spherical_grids(r=0):
@@ -80,7 +87,6 @@ def create_spherical_grids(r=0):
     :param r:resolution_level
     :return:np array, shape=(10 × 4^L + 2, 3)
     """
-
     def initial_icosahedral_grid_theta():
         theta = []
         theta.append([0, np.pi / 2])
@@ -144,14 +150,18 @@ def create_spherical_grids(r=0):
         return points, new_triangles
 
     initial_theta = initial_icosahedral_grid_theta()
-    points = theta2vector(initial_theta)
+    print(np.rad2deg(initial_theta))
+    points = theta2vec(initial_theta)
+    x = vec2theta(points)
+    print(np.rad2deg(x).astype(np.int))
+    # points = theta2vec(x)
     # initial triangles
     triangles = initial_triangles(np.array(points))
     ilevel = 0
     while ilevel < r:
         points, triangles = get_next_points_and_triangles(points, triangles)
         ilevel += 1
-    return np.array(points)
+    return np.array(points), triangles
 
 
 # 暂时不用窗口直接对输入的数据做fft
@@ -177,8 +187,9 @@ def gcc_phat(x_i, x_j, fs, tau):
 
 
 def srp_phat(raw_signal, mic_array_pos, c, fs):
+    assert raw_signal.shape[0] == mic_array_pos.shape[0]
     mic_num = mic_array_pos.shape[0]
-    grid = create_spherical_grids(0)
+    grid, _ = create_spherical_grids(0)
     E_d = np.zeros(grid.shape[0])
     for i in range(mic_num):
         for j in range(i, mic_num):
@@ -191,6 +202,8 @@ def srp_phat(raw_signal, mic_array_pos, c, fs):
 
 if __name__ == '__main__':
     pass
-    # a, ta = create_spherical_grids(r=4)
+    p, ta = create_spherical_grids(r=0)
+    plot_grid(p, ta)
+    print(p.shape)
     # print(a)
     # print(a.shape[0])
