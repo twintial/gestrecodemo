@@ -1,9 +1,12 @@
+import collections
+
 import numpy as np
 import scipy.signal as signal
 from scipy.fftpack import fft, fftfreq
 
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D  # 空间三维画图\
+from mpl_toolkits.mplot3d import Axes3D  # 空间三维画图
+
 
 def cons_uca(r):
     theta = np.pi / 3
@@ -11,6 +14,31 @@ def cons_uca(r):
     for i in range(6):
         pos.append([r * np.cos(theta * i), r * np.sin(theta * i), 0])
     return np.array(pos)
+
+
+def plot_grid(points, ta):
+    # 绘制散点图
+    fig = plt.figure()
+    ax = Axes3D(fig)
+    # ax.scatter(a[:,0], a[:,1], a[:,2])
+    for i in ta:
+        ax.plot((i.a[0], i.b[0]), (i.a[1], i.b[1]), (i.a[2], i.b[2]), color='red')
+        ax.plot((i.a[0], i.c[0]), (i.a[1], i.c[1]), (i.a[2], i.c[2]), color='red')
+        ax.plot((i.b[0], i.c[0]), (i.b[1], i.c[1]), (i.b[2], i.c[2]), color='red')
+
+    for i in range(points.shape[0]):
+        ax.text(points[i, 0], points[i, 1], points[i, 2], str(i))
+    # ax.scatter(0,0,0)
+    ax.set_xlim3d(-1, 1)
+    ax.set_ylim3d(-1, 1)
+    ax.set_zlim3d(-1, 1)
+
+    # 添加坐标轴(顺序是Z, Y, X)
+    ax.set_zlabel('Z', fontdict={'size': 15, 'color': 'red'})
+    ax.set_ylabel('Y', fontdict={'size': 15, 'color': 'red'})
+    ax.set_xlabel('X', fontdict={'size': 15, 'color': 'red'})
+    plt.show()
+    # f, t, zxx = signal.spectrogram(x, fs)
 
 
 def get_steering_vector(pos_i, pos_j, c, dvec):
@@ -26,36 +54,43 @@ def get_steering_vector(pos_i, pos_j, c, dvec):
     dist = np.dot((pos_i - pos_j).reshape(1, 3), dvec.T)
     return (-dist.T / c).reshape(-1)  # 这个负号要不要?
 
+
 def theta2vector(theta, r=1):
-    vectors = np.zeros((theta.shape[0], 3))
-    vectors[:, 0] = r*np.cos(theta[:, 1])*np.cos(theta[:, 0])
-    vectors[:, 1] = r*np.cos(theta[:, 1])*np.sin(theta[:, 0])
-    vectors[:, 2] = r*np.sin(theta[:, 1])
+    # vectors = np.zeros((theta.shape[0], 3))
+    # vectors[:, 0] = r*np.cos(theta[:, 1])*np.cos(theta[:, 0])
+    # vectors[:, 1] = r*np.cos(theta[:, 1])*np.sin(theta[:, 0])
+    # vectors[:, 2] = r*np.sin(theta[:, 1])
+    vectors = []
+    for t in theta:
+        vectors.append(
+            [r * np.cos(t[1]) * np.cos(t[0]),
+             r * np.cos(t[1]) * np.sin(t[0]),
+             r * np.sin(t[1])])
     return vectors
+
 
 def create_spherical_grids(r=0):
     class Triangle:
-        def __init__(self, a, b, c):
+        def __init__(self, a: np.ndarray, b: np.ndarray, c: np.ndarray):
             self.a = a
             self.b = b
             self.c = c
+
     """
     :param r:resolution_level
     :return:np array, shape=(10 × 4^L + 2, 3)
     """
+
     def initial_icosahedral_grid_theta():
         theta = []
-        theta.append([0, np.pi/2])
+        theta.append([0, np.pi / 2])
         for i in range(2, 7):
-            theta.append([(i-3/2)*2*np.pi/5, 2*np.arcsin(1/(2*np.cos(3*np.pi/10)))-np.pi/2])
+            theta.append([(i - 3 / 2) * 2 * np.pi / 5, 2 * np.arcsin(1 / (2 * np.cos(3 * np.pi / 10))) - np.pi / 2])
         for i in range(7, 12):
-            theta.append([(i-7)*2*np.pi/5, -2*np.arcsin(1/(2*np.cos(3*np.pi/10)))+np.pi/2])
-        theta.append([0, -np.pi/2])
+            theta.append([(i - 7) * 2 * np.pi / 5, -2 * np.arcsin(1 / (2 * np.cos(3 * np.pi / 10))) + np.pi / 2])
+        theta.append([0, -np.pi / 2])
         return np.array(theta)
-    initial_theta = initial_icosahedral_grid_theta()
-    print(initial_theta)
-    points = theta2vector(initial_theta)
-    # initial triangles
+
     def initial_triangles(points):
         trianles = []
         trianles.append(Triangle(points[0], points[2], points[1]))
@@ -79,8 +114,45 @@ def create_spherical_grids(r=0):
         trianles.append(Triangle(points[11], points[9], points[10]))
         trianles.append(Triangle(points[11], points[10], points[6]))
         return trianles
-    triangles = initial_triangles(points)
-    return np.array(points), triangles
+
+    def get_next_points_and_triangles(points, triangles):
+        def find_point(point, points):
+            for p in points:
+                if np.all(point == p):
+                    return False
+            return True
+
+        new_triangles = []
+        for triangle in triangles:
+            point1 = triangle.a + triangle.b
+            point2 = triangle.a + triangle.c
+            point3 = triangle.b + triangle.c
+            point1 = point1 / np.linalg.norm(point1)
+            point2 = point2 / np.linalg.norm(point2)
+            point3 = point3 / np.linalg.norm(point3)
+            if find_point(point1, points):
+                points.append(point1)
+            if find_point(point2, points):
+                points.append(point2)
+            if find_point(point3, points):
+                points.append(point3)
+            # 1 triangle subdivide into 4
+            new_triangles.append(Triangle(triangle.a, point1, point2))
+            new_triangles.append(Triangle(triangle.b, point1, point3))
+            new_triangles.append(Triangle(triangle.c, point3, point2))
+            new_triangles.append(Triangle(point1, point2, point3))
+        return points, new_triangles
+
+    initial_theta = initial_icosahedral_grid_theta()
+    points = theta2vector(initial_theta)
+    # initial triangles
+    triangles = initial_triangles(np.array(points))
+    ilevel = 0
+    while ilevel < r:
+        points, triangles = get_next_points_and_triangles(points, triangles)
+        ilevel += 1
+    return np.array(points)
+
 
 # 暂时不用窗口直接对输入的数据做fft
 def gcc_phat(x_i, x_j, fs, tau):
@@ -116,30 +188,9 @@ def srp_phat(raw_signal, mic_array_pos, c, fs):
             E_d += R_ij
     sdevc = grid[np.argmax(E_d, axis=1)]  # source direction vector
 
+
 if __name__ == '__main__':
     pass
-    a, ta = create_spherical_grids(r=0)
-    print(a)
-
-    # 绘制散点图
-    fig = plt.figure()
-    ax = Axes3D(fig)
-    # ax.scatter(a[:,0], a[:,1], a[:,2])
-    for i in ta:
-        ax.plot((i.a[0], i.b[0]),(i.a[1], i.b[1]),(i.a[2], i.b[2]), color='red')
-        ax.plot((i.a[0], i.c[0]),(i.a[1], i.c[1]),(i.a[2], i.c[2]), color='red')
-        ax.plot((i.b[0], i.c[0]),(i.b[1], i.c[1]),(i.b[2], i.c[2]), color='red')
-
-    for i in range(a.shape[0]):
-        ax.text(a[i, 0], a[i, 1], a[i, 2], str(i))
-    # ax.scatter(0,0,0)
-    ax.set_xlim3d(-1,1)
-    ax.set_ylim3d(-1,1)
-    ax.set_zlim3d(-1,1)
-
-    # 添加坐标轴(顺序是Z, Y, X)
-    ax.set_zlabel('Z', fontdict={'size': 15, 'color': 'red'})
-    ax.set_ylabel('Y', fontdict={'size': 15, 'color': 'red'})
-    ax.set_xlabel('X', fontdict={'size': 15, 'color': 'red'})
-    plt.show()
-    # f, t, zxx = signal.spectrogram(x, fs)
+    # a, ta = create_spherical_grids(r=4)
+    # print(a)
+    # print(a.shape[0])
