@@ -136,7 +136,8 @@ class Record:
         self.connection, address = self.tcp_socket.accept()
         print(f'got connected from {address}')
 
-        self.play_signal(signal)
+        if signal is not None:
+            self.play_signal(signal)
         self.record()
 
     def stop(self):

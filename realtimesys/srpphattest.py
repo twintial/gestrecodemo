@@ -36,6 +36,7 @@ def gcc_phat_search(x_i, x_j, fs, tau):
     """
     # 要看是否对应上了
     P = fft(x_i) * fft(x_j).conj()
+    plt.plot(abs(fft(x_i))/len(x_i))
     A = P / (np.abs(P)+np.finfo(np.float32).eps)
     # 为之后使用窗口做准备
     A = A.reshape(1, -1)
@@ -55,6 +56,7 @@ LENG = 500
 
 data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\0.wav', 'wav')
 data = data[48000 * 1 + 44000:48000+44000+512, :-1].T
+# data = data[48000 * 1:48000 + 2048, :-1].T
 # data = data[48000 * 1 + 90000:48000 + 90000 + 1024, :-1].T
 # for i, d in enumerate(data):
 #     plt.subplot(4, 2, i + 1)

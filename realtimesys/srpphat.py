@@ -1,4 +1,5 @@
 import collections
+import socket
 
 import numpy as np
 import scipy.signal as signal
@@ -236,10 +237,36 @@ def split_frame():
     skip_time = int(fs * 1.8)
     data = data[skip_time:, :-1].T
     for i in range(0, data.shape[1], frame_count):
-        print('time: ', (skip_time + i)/fs)
         data_seg = data[:, i:i+frame_count]
+        # 噪声不做,随便写的
+        if np.max(abs(fft(data_seg[0] / len(data_seg[0])))) < 10:
+            continue
+        print('time: ', (skip_time + i)/fs)
         pos = cons_uca(0.043)
         E = srp_phat(data_seg, pos, c, fs, level=4)
+
+
+def real_time_run():
+    pos = cons_uca(0.043)
+    frame_count = 2048
+    channels = 8
+    c = 343
+    fs = 48000
+    # socket
+    address = ('127.0.0.1', 31500)
+    tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcp_socket.connect(address)
+    while True:
+        rdata = tcp_socket.recv(frame_count * channels * 2)
+        if len(rdata) == 0:
+            break
+        data = np.frombuffer(rdata, dtype=np.int16)
+        data = data.reshape(-1, channels).T
+        data = data[:7, :]
+        # 噪声不做,随便写的
+        if np.max(abs(fft(data[0] / len(data[0])))) < 10:
+            continue
+        E = srp_phat(data, pos, c, fs, level=4)
 
 
 if __name__ == '__main__':
@@ -261,5 +288,5 @@ if __name__ == '__main__':
     # c = 343
     # E = srp_phat(data, pos, c, fs, level=4)
 
-    split_frame()
-
+    # split_frame()
+    real_time_run()
