@@ -43,12 +43,11 @@ def plot_grid(points, ta):
     # f, t, zxx = signal.spectrogram(x, fs)
 
 
-def plot_angspect(R, grid):
-    threshold = np.percentile(R, 99)
-    print(threshold)
+def plot_angspect(R, grid, percentile=95):
+    threshold = np.percentile(R, percentile)
     fig = plt.figure()
     ax = Axes3D(fig)
-    ax.scatter(grid[:, 0], grid[:, 1], grid[:, 2])
+    # ax.scatter(grid[:, 0], grid[:, 1], grid[:, 2])
     for i, energy in enumerate(R):
         if energy < threshold:
             continue
@@ -57,8 +56,7 @@ def plot_angspect(R, grid):
     ax.set_zlabel('Z', fontdict={'size': 15, 'color': 'red'})
     ax.set_ylabel('Y', fontdict={'size': 15, 'color': 'red'})
     ax.set_xlabel('X', fontdict={'size': 15, 'color': 'red'})
-    plt.show()
-    pass
+    # plt.show()
 
 
 def get_steering_vector(pos_i, pos_j, c, dvec):
@@ -216,37 +214,52 @@ def srp_phat(raw_signal, mic_array_pos, c, fs, level=1):
     mic_num = mic_array_pos.shape[0]
     # grid, _ = create_spherical_grids(level)
     grid: np.ndarray = np.load(rf'grid/{level}.npz')['grid']
-    print(grid.shape)
+    # print(grid.shape)
     E_d = np.zeros((1, grid.shape[0]))  # (num_frames, num_points)
     for i in range(mic_num):
         for j in range(i + 1, mic_num):
-            # tau is given in second
+            # tau is given in second, 这个也可以提前计算
             tau = get_steering_vector(mic_array_pos[i], mic_array_pos[j], c, grid)
             R_ij = gcc_phat(raw_signal[i], raw_signal[j], fs, tau)
             E_d += R_ij
     sdevc = grid[np.argmax(E_d, axis=1)]  # source direction vector
-    print(sdevc)
-    print(np.rad2deg(vec2theta(sdevc)))
-    plot_angspect(E_d[0], grid)
+    # print(sdevc)
+    print('angle of  max val: ', np.rad2deg(vec2theta(sdevc)))
+    # plot_angspect(E_d[0], grid)
     return E_d
 
 
+def split_frame():
+    c = 343
+    frame_count = 256
+    data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\0.wav', 'wav')
+    skip_time = int(fs * 1.8)
+    data = data[skip_time:, :-1].T
+    for i in range(0, data.shape[1], frame_count):
+        print('time: ', (skip_time + i)/fs)
+        data_seg = data[:, i:i+frame_count]
+        pos = cons_uca(0.043)
+        E = srp_phat(data_seg, pos, c, fs, level=4)
+
+
 if __name__ == '__main__':
-    # r = 4
+    # r = 0
     # p, ta = create_spherical_grids(r=r)
     # plot_grid(p, ta)
     # np.savez_compressed(rf'grid/{r}.npz', grid=p)
     pass
-    data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\0.wav', 'wav')
-    data = data[48000 * 1 + 44000:48000+44000+512, :-1].T
+    # data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\mic2.wav', 'wav')
+    # # data = data[48000 * 1 + 44000:48000+44000+1024, :-1].T
     # data = data[48000 * 1+90000:48000 + 90000+1024, :-1].T
-    for i, d in enumerate(data):
-        plt.subplot(4,2,i+1)
-        plt.plot(d)
-    plt.show()
-    pos = cons_uca(0.043)
-    # plt.plot(pos[:,0],pos[:,1])
-    plt.show()
-    c = 343
-    E = srp_phat(data, pos, c, fs, level=4)
+    # for i, d in enumerate(data):
+    #     plt.subplot(4,2,i+1)
+    #     plt.plot(d)
+    # plt.show()
+    # pos = cons_uca(0.043)
+    # # plt.plot(pos[:,0],pos[:,1])
+    # plt.show()
+    # c = 343
+    # E = srp_phat(data, pos, c, fs, level=4)
+
+    split_frame()
 
