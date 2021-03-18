@@ -6,6 +6,8 @@ import numpy as np
 import scipy.signal as signal
 from scipy.fftpack import fft, fftfreq
 
+from concurrent.futures import ThreadPoolExecutor
+
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # 空间三维画图
 
@@ -188,14 +190,6 @@ def create_spherical_grids(r=0):
 
 
 # 暂时不用窗口直接对输入的数据做fft
-def calculate_pairs_tau(mic_array_pos, search_grid, c):
-    mic_num = mic_array_pos.shape[0]
-    pair_dic = {}
-    for i in range(mic_num):
-        for j in range(i + 1, mic_num):
-            tau = get_steering_vector(mic_array_pos[i], mic_array_pos[j], c, search_grid)
-            pair_dic[str(i) + str(j)] = tau
-    return pair_dic
 def gcc_phat(x_i, x_j, fs, tau):
     """
     :param x_i: real signal of mic i
@@ -213,14 +207,14 @@ def gcc_phat(x_i, x_j, fs, tau):
 
     num_bins = A.shape[1]
     k = np.arange(num_bins)
-    t1 = time.time()
+    # t1 = time.time()
     exp_part = np.outer(k, 2j * np.pi * tau * fs/num_bins)
-    t2 = time.time()
-    print('ifft1 time consuption: ', t2 - t1)
-    t1 = time.time()
+    # t2 = time.time()
+    # print('ifft1 time consuption: ', t2 - t1)
+    # t1 = time.time()
     R = np.dot(A, np.exp(exp_part)) / num_bins
-    t2 = time.time()
-    print('ifft2 time consuption: ', t2 - t1)
+    # t2 = time.time()
+    # print('ifft2 time consuption: ', t2 - t1)
     return np.abs(R)
 def srp_phat(raw_signal, mic_array_pos, search_grid, c, fs):
     assert raw_signal.shape[0] == mic_array_pos.shape[0]
@@ -232,13 +226,23 @@ def srp_phat(raw_signal, mic_array_pos, search_grid, c, fs):
         for j in range(i + 1, mic_num):
             # tau is given in second, 这个也可以提前计算
             tau = get_steering_vector(mic_array_pos[i], mic_array_pos[j], c, search_grid)
-            t1 = time.time()
+            # t1 = time.time()
             R_ij = gcc_phat(raw_signal[i], raw_signal[j], fs, tau)
-            t2 = time.time()
+            # t2 = time.time()
             E_d += R_ij
-            print('each pair time consuption: ', t2 - t1)
+            # print('each pair time consuption: ', t2 - t1)
     return E_d
 # 貌似没有改进
+@DeprecationWarning
+def calculate_pairs_tau(mic_array_pos, search_grid, c):
+    mic_num = mic_array_pos.shape[0]
+    pair_dic = {}
+    for i in range(mic_num):
+        for j in range(i + 1, mic_num):
+            tau = get_steering_vector(mic_array_pos[i], mic_array_pos[j], c, search_grid)
+            pair_dic[str(i) + str(j)] = tau
+    return pair_dic
+@DeprecationWarning
 def srp_phat_previous_tau(raw_signal, mic_array_pos, search_grid, pairs_tau, fs):
     assert raw_signal.shape[0] == mic_array_pos.shape[0]
     mic_num = mic_array_pos.shape[0]
@@ -253,8 +257,33 @@ def srp_phat_previous_tau(raw_signal, mic_array_pos, search_grid, pairs_tau, fs)
             E_d += R_ij
     return E_d
 
+# 多线程,失败
+@DeprecationWarning
+def srp_phat_muti_thread(raw_signal, mic_array_pos, search_grid, c, fs):
+    def calculate_Rij(i, j):
+        tau = get_steering_vector(mic_array_pos[i], mic_array_pos[j], c, search_grid)
+        R_ij = gcc_phat(raw_signal[i], raw_signal[j], fs, tau)
+        return R_ij
+    assert raw_signal.shape[0] == mic_array_pos.shape[0]
+    mic_num = mic_array_pos.shape[0]
+    executor = ThreadPoolExecutor(max_workers=1)
+    E_d = np.zeros((1, search_grid.shape[0]))  # (num_frames, num_points), 之后要改
+    t1 = time.time()
+    i_s = []
+    j_s = []
+    for i in range(mic_num):
+        for j in range(i+1):
+            i_s.append(i)
+            j_s.append(j)
+    for R_ij in executor.map(calculate_Rij, i_s, j_s):
+        E_d += R_ij
+    t2 = time.time()
+    print('each pair time consuption: ', t2 - t1)
+    return E_d
+
 
 # 尝试用矩阵加速。没用，矩阵太大了
+@DeprecationWarning
 def calculate_stack_fft_and_pairs_tau(raw_signals, mic_array_pos, search_grid, c):
     mic_num = mic_array_pos.shape[0]
     pair_tau = []
@@ -270,6 +299,7 @@ def calculate_stack_fft_and_pairs_tau(raw_signals, mic_array_pos, search_grid, c
             pair_fft.append(A)
     h_stack_fft = np.hstack([pf for pf in pair_fft])
     return np.array(pair_tau), h_stack_fft
+@DeprecationWarning
 def gcc_phat_m(stack_fft, fs, pair_tau):
     """
     :param x_i: real signal of mic i
@@ -293,6 +323,7 @@ def gcc_phat_m(stack_fft, fs, pair_tau):
     t2 = time.time()
     print('ifft2 time consuption: ', t2 - t1)
     return np.abs(R)
+@DeprecationWarning
 def srp_phat_m(raw_signal, mic_array_pos, stack_raw_signal_fft, pairs_tau, fs):
     assert raw_signal.shape[0] == mic_array_pos.shape[0]
     mic_num = mic_array_pos.shape[0]
@@ -305,25 +336,26 @@ def srp_phat_m(raw_signal, mic_array_pos, stack_raw_signal_fft, pairs_tau, fs):
 
 def split_frame():
     c = 343
-    frame_count = 2048
-    data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\0.wav', 'wav')
+    frame_count = 128
+    data, fs = load_audio_data(r'D:\projects\pyprojects\gesturerecord\location\1khz\0.wav', 'wav')
     skip_time = int(fs * 1)
     data = data[skip_time:, :-1].T
     # search unit circle
-    level = 4
+    level = 3
     grid: np.ndarray = np.load(rf'grid/{level}.npz')['grid']
     # mic mem pos
     pos = cons_uca(0.043)
     # calculate tau previously
-    pairs_tau = calculate_pairs_tau(pos, grid, c)
+    # pairs_tau = calculate_pairs_tau(pos, grid, c)
     for i in range(0, data.shape[1], frame_count):
         data_seg = data[:, i:i+frame_count]
         # 噪声不做,随便写的
-        if np.max(abs(fft(data_seg[0] / len(data_seg[0])))) < 1:
+        if np.max(abs(fft(data_seg[0] / len(data_seg[0])))) < 10:
             continue
         print('time: ', (skip_time + i)/fs)
         t1 = time.time()
         E = srp_phat(data_seg, pos, grid, c, fs)
+        # E = srp_phat_muti_thread(data, pos, grid, c, fs)
         # E = srp_phat_previous_tau(data_seg, pos, grid, pairs_tau, fs)
         t2 = time.time()
         print('srp_phat time consumption: ', t2-t1)
@@ -334,6 +366,7 @@ def split_frame():
         # plot_angspect(E_d[0], grid)
 
 # 失败
+@DeprecationWarning
 def split_frame_m():
     c = 343
     frame_count = 2048

@@ -37,7 +37,6 @@ def gcc_phat_search(x_i, x_j, fs, tau):
     P = fft(x_i) * fft(x_j).conj()
     plt.figure()
     plt.plot(abs(fft(x_i)) / len(x_i))
-    # plt.plot(abs(fft(x_i))/len(x_i))
     A = P / (np.abs(P)+np.finfo(np.float32).eps)
     # 为之后使用窗口做准备
     A = A.reshape(1, -1)
@@ -51,23 +50,11 @@ def gcc_phat_search(x_i, x_j, fs, tau):
     R = np.dot(A, np.exp(exp_part)) / num_bins
     return np.abs(R)
 
-LENG = 500
-# a = np.array(np.random.rand(LENG))
-# b = np.array(np.random.rand(LENG))
 
-# data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\0.wav', 'wav')
-# data = data[48000 * 1 + 44000:48000+44000+1024, :-1].T
-# data = data[48000 * 1:48000 + 2048, :-1].T
-# data = data[48000 * 1 + 90000:48000 + 90000 + 1024, :-1].T
-# for i, d in enumerate(data):
-#     plt.subplot(4, 2, i + 1)
-#     plt.plot(d)
-# plt.show()
-
-data, fs = load_audio_data(r'D:\projects\pyprojects\gesturerecord\location\0\0.wav', 'wav')
-skip_time = int(fs * 1)
-data = data[skip_time:, :-1].T
-data = data[:,48000:48000+1024]
+LENG = 512
+data, fs = load_audio_data(r'D:\projects\pyprojects\gesturerecord\location\1khz\0.wav', 'wav')
+t = 2
+data = data[fs * t:fs * t + LENG, :-1].T
 #
 # for i, d in enumerate(data):
 #     plt.subplot(4, 2, i + 1)
@@ -91,7 +78,8 @@ grid = np.load(rf'grid/{level}.npz')['grid']
 tau = get_steering_vector(mic_array_pos[i], mic_array_pos[j], c, grid)
 R = gcc_phat_search(a, b, fs, tau)
 
-plot_angspect(R[0], grid, percentile=99)
+# 画射线图
+# plot_angspect(R[0], grid, percentile=99)
 
 # r = R[0]
 # sorted_arg = np.argsort(r)[::-1]
