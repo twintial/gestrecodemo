@@ -7,6 +7,8 @@ from scipy.fftpack import fft, fftfreq
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # 空间三维画图
 
+from audiotools.util import load_audio_data
+
 
 def cons_uca(r):
     theta = np.pi / 3
@@ -150,11 +152,14 @@ def create_spherical_grids(r=0):
         return points, new_triangles
 
     initial_theta = initial_icosahedral_grid_theta()
-    print(np.rad2deg(initial_theta))
+    # print(np.rad2deg(initial_theta))
     points = theta2vec(initial_theta)
-    x = vec2theta(points)
-    print(np.rad2deg(x).astype(np.int))
+    # x = vec2theta(points)
+    # print(np.rad2deg(x).astype(np.int))
     # points = theta2vec(x)
+
+    # print(np.all())
+
     # initial triangles
     triangles = initial_triangles(np.array(points))
     ilevel = 0
@@ -175,35 +180,50 @@ def gcc_phat(x_i, x_j, fs, tau):
     """
     # 要看是否对应上了
     P = fft(x_i) * fft(x_j).conj()
-    A = P / np.abs(P)
+    A = P / (np.abs(P)+np.finfo(np.float32).eps)
     # 为之后使用窗口做准备
     A = A.reshape(1, -1)
 
-    num_bins = A.reshape[1]
+    num_bins = A.shape[1]
     k = np.linspace(0, fs / 2, num_bins)
     exp_part = np.outer(k, 2j * np.pi * tau)
     R = np.dot(A, exp_part)
     return R.real
 
 
-def srp_phat(raw_signal, mic_array_pos, c, fs):
+def srp_phat(raw_signal, mic_array_pos, c, fs, level=1):
     assert raw_signal.shape[0] == mic_array_pos.shape[0]
     mic_num = mic_array_pos.shape[0]
-    grid, _ = create_spherical_grids(0)
-    E_d = np.zeros(grid.shape[0])
+    # grid, _ = create_spherical_grids(level)
+    grid: np.ndarray = np.load(rf'grid/{level}.npz')['grid']
+    print(grid.shape)
+    E_d = np.zeros((1, grid.shape[0]))  # (num_frames, num_points)
     for i in range(mic_num):
-        for j in range(i, mic_num):
+        for j in range(i + 1, mic_num):
             # tau is given in second
             tau = get_steering_vector(mic_array_pos[i], mic_array_pos[j], c, grid)
             R_ij = gcc_phat(raw_signal[i], raw_signal[j], fs, tau)
             E_d += R_ij
     sdevc = grid[np.argmax(E_d, axis=1)]  # source direction vector
+    print(sdevc)
+    print(np.rad2deg(vec2theta(sdevc)))
+    return E_d
 
 
 if __name__ == '__main__':
+    # r = 4
+    # p, ta = create_spherical_grids(r=r)
+    # plot_grid(p, ta)
+    # np.savez_compressed(rf'grid/{r}.npz', grid=p)
     pass
-    p, ta = create_spherical_grids(r=0)
-    plot_grid(p, ta)
-    print(p.shape)
-    # print(a)
-    # print(a.shape[0])
+    data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\mic2.wav', 'wav')
+    # data = data[48000 * 1 + 44000:48000+44000+512, :-1].T
+    data = data[48000 * 1+90000:48000 + 90000+1024, :-1].T
+    for i, d in enumerate(data):
+        plt.subplot(4,2,i+1)
+        plt.plot(d)
+    plt.show()
+    pos = cons_uca(0.043)
+    c = 343
+    E = srp_phat(data, pos, c, fs, level=4)
+
