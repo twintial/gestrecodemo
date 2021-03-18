@@ -233,8 +233,8 @@ def srp_phat(raw_signal, mic_array_pos, c, fs, level=1):
 def split_frame():
     c = 343
     frame_count = 256
-    data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\0.wav', 'wav')
-    skip_time = int(fs * 1.8)
+    data, fs = load_audio_data(r'D:\projects\pyprojects\gesturerecord\location\0\0.wav', 'wav')
+    skip_time = int(fs * 1)
     data = data[skip_time:, :-1].T
     for i in range(0, data.shape[1], frame_count):
         data_seg = data[:, i:i+frame_count]
@@ -288,5 +288,5 @@ if __name__ == '__main__':
     # c = 343
     # E = srp_phat(data, pos, c, fs, level=4)
 
-    # split_frame()
-    real_time_run()
+    split_frame()
+    # real_time_run()
