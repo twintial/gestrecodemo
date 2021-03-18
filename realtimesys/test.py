@@ -76,7 +76,7 @@ print(tau[np.argmax(R)] * fs)
 max_p = grid[np.argmax(R)]
 print(max_p)
 plt.figure()
-plt.scatter(np.arange(R.shape[1]),R.reshape(-1))
+plt.plot(R.reshape(-1))
 plt.title('gcc search')
 # plt.figure()
 # plt.plot(np.correlate(a,b,'full'))
