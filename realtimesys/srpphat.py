@@ -43,6 +43,11 @@ def plot_grid(points, ta):
     # f, t, zxx = signal.spectrogram(x, fs)
 
 
+def plot_angspect(R, grid):
+    angles = vec2theta(grid)
+    pass
+
+
 def get_steering_vector(pos_i, pos_j, c, dvec):
     """
     :param pos_i:
@@ -189,10 +194,9 @@ def gcc_phat(x_i, x_j, fs, tau):
     # exp_part = np.outer(k, 2j * np.pi * tau)
     # R = np.dot(A, np.exp(exp_part))
     k = np.arange(num_bins)
-    exp_part = np.outer(k, 2j * np.pi * tau * fs)
+    exp_part = np.outer(k, 2j * np.pi * tau * fs/num_bins)
     R = np.dot(A, np.exp(exp_part)) / num_bins
     return np.abs(R)
-
 
 def srp_phat(raw_signal, mic_array_pos, c, fs, level=1):
     assert raw_signal.shape[0] == mic_array_pos.shape[0]
@@ -210,6 +214,7 @@ def srp_phat(raw_signal, mic_array_pos, c, fs, level=1):
     sdevc = grid[np.argmax(E_d, axis=1)]  # source direction vector
     print(sdevc)
     print(np.rad2deg(vec2theta(sdevc)))
+    plot_angspect(E_d, grid)
     return E_d
 
 
@@ -219,14 +224,16 @@ if __name__ == '__main__':
     # plot_grid(p, ta)
     # np.savez_compressed(rf'grid/{r}.npz', grid=p)
     pass
-    data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\0.wav', 'wav')
-    data = data[48000 * 1 + 44000:48000+44000+512, :-1].T
-    # data = data[48000 * 1+90000:48000 + 90000+1024, :-1].T
+    data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\mic2.wav', 'wav')
+    # data = data[48000 * 1 + 44000:48000+44000+512, :-1].T
+    data = data[48000 * 1+90000:48000 + 90000+1024, :-1].T
     for i, d in enumerate(data):
         plt.subplot(4,2,i+1)
         plt.plot(d)
     plt.show()
     pos = cons_uca(0.043)
+    plt.plot(pos[:,0],pos[:,1])
+    plt.show()
     c = 343
     E = srp_phat(data, pos, c, fs, level=4)
 

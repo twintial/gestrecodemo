@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 from scipy.fftpack import rfft, irfft, fftfreq, fft, ifft, fftshift
 
 from audiotools.util import load_audio_data
@@ -14,7 +15,6 @@ def ifft1(a):
             F += a[m] * np.exp(2j * np.pi * (m*k) / N)/N
         f.append(F)
     return f
-
 
 def gcc_phat(a, b):
     f_s1 = fft(a)
@@ -44,7 +44,7 @@ def gcc_phat_search(x_i, x_j, fs, tau):
     # exp_part = np.outer(k, 2j * np.pi * tau)
     # R = np.dot(A, np.exp(exp_part))
     k = np.arange(num_bins)
-    exp_part = np.outer(k, 2j * np.pi * tau * fs)
+    exp_part = np.outer(k, 2j * np.pi * tau * fs/num_bins)
     R = np.dot(A, np.exp(exp_part)) / num_bins
     return np.abs(R)
 
@@ -52,8 +52,9 @@ LENG = 500
 # a = np.array(np.random.rand(LENG))
 # b = np.array(np.random.rand(LENG))
 
-data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\0.wav', 'wav')
-data = data[48000 * 1 + 44000:48000+44000+512, :-1].T
+data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\mic2.wav', 'wav')
+# data = data[48000 * 1 + 44000:48000+44000+512, :-1].T
+data = data[48000 * 1 + 90000:48000 + 90000 + 1024, :-1].T
 # for i, d in enumerate(data):
 #     plt.subplot(4, 2, i + 1)
 #     plt.plot(d)
@@ -70,10 +71,24 @@ c = 343
 grid = np.load(rf'grid/4.npz')['grid']
 tau = get_steering_vector(mic_array_pos[i], mic_array_pos[j], c, grid)
 R = gcc_phat_search(a, b, fs, tau)
+print(np.argmax(R))
 print(tau[np.argmax(R)] * fs)
+max_p = grid[np.argmax(R)]
+print(max_p)
 plt.figure()
-plt.plot(R.reshape(-1))
+plt.scatter(np.arange(R.shape[1]),R.reshape(-1))
 plt.title('gcc search')
 # plt.figure()
 # plt.plot(np.correlate(a,b,'full'))
+plt.show()
+
+fig = plt.figure()
+ax = Axes3D(fig)
+ax.plot((0, max_p[0]), (0, max_p[1]), (0, max_p[2]))
+ax.set_xlim3d(-1, 1)
+ax.set_ylim3d(-1, 1)
+ax.set_zlim3d(-1, 1)
+ax.set_zlabel('Z', fontdict={'size': 15, 'color': 'red'})
+ax.set_ylabel('Y', fontdict={'size': 15, 'color': 'red'})
+ax.set_xlabel('X', fontdict={'size': 15, 'color': 'red'})
 plt.show()
