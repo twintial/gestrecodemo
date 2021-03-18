@@ -23,7 +23,7 @@ def gcc_phat(a, b):
     f_s = f_s1 * f_s2c
     denom = np.abs(f_s) + np.finfo(np.float32).eps
     f_s = f_s / denom  # This line is the only difference between GCC-PHAT and normal cross correlation
-    return np.abs(ifft1(f_s))
+    return np.abs(ifft(f_s))
 
 def gcc_phat_search(x_i, x_j, fs, tau):
     """
@@ -40,10 +40,13 @@ def gcc_phat_search(x_i, x_j, fs, tau):
     A = A.reshape(1, -1)
 
     num_bins = A.shape[1]
-    k = np.linspace(0, fs / 2, num_bins)
-    exp_part = np.outer(k, 2j * np.pi * tau)
-    R = np.dot(A, exp_part)
-    return R.real
+    # k = np.linspace(0, fs / 2, num_bins)
+    # exp_part = np.outer(k, 2j * np.pi * tau)
+    # R = np.dot(A, np.exp(exp_part))
+    k = np.arange(num_bins)
+    exp_part = np.outer(k, 2j * np.pi * tau * fs)
+    R = np.dot(A, np.exp(exp_part)) / num_bins
+    return np.abs(R)
 
 LENG = 500
 # a = np.array(np.random.rand(LENG))

@@ -185,10 +185,13 @@ def gcc_phat(x_i, x_j, fs, tau):
     A = A.reshape(1, -1)
 
     num_bins = A.shape[1]
-    k = np.linspace(0, fs / 2, num_bins)
-    exp_part = np.outer(k, 2j * np.pi * tau)
-    R = np.dot(A, exp_part)
-    return R.real
+    # k = np.linspace(0, fs / 2, num_bins)
+    # exp_part = np.outer(k, 2j * np.pi * tau)
+    # R = np.dot(A, np.exp(exp_part))
+    k = np.arange(num_bins)
+    exp_part = np.outer(k, 2j * np.pi * tau * fs)
+    R = np.dot(A, np.exp(exp_part)) / num_bins
+    return np.abs(R)
 
 
 def srp_phat(raw_signal, mic_array_pos, c, fs, level=1):
@@ -216,9 +219,9 @@ if __name__ == '__main__':
     # plot_grid(p, ta)
     # np.savez_compressed(rf'grid/{r}.npz', grid=p)
     pass
-    data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\mic2.wav', 'wav')
-    # data = data[48000 * 1 + 44000:48000+44000+512, :-1].T
-    data = data[48000 * 1+90000:48000 + 90000+1024, :-1].T
+    data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\0.wav', 'wav')
+    data = data[48000 * 1 + 44000:48000+44000+512, :-1].T
+    # data = data[48000 * 1+90000:48000 + 90000+1024, :-1].T
     for i, d in enumerate(data):
         plt.subplot(4,2,i+1)
         plt.plot(d)
