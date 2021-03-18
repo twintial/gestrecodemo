@@ -1,5 +1,6 @@
 import collections
 import socket
+import time
 
 import numpy as np
 import scipy.signal as signal
@@ -187,6 +188,14 @@ def create_spherical_grids(r=0):
 
 
 # 暂时不用窗口直接对输入的数据做fft
+def calculate_pairs_tau(mic_array_pos, search_grid, c):
+    mic_num = mic_array_pos.shape[0]
+    pair_dic = {}
+    for i in range(mic_num):
+        for j in range(i + 1, mic_num):
+            tau = get_steering_vector(mic_array_pos[i], mic_array_pos[j], c, search_grid)
+            pair_dic[str(i) + str(j)] = tau
+    return pair_dic
 def gcc_phat(x_i, x_j, fs, tau):
     """
     :param x_i: real signal of mic i
@@ -198,60 +207,176 @@ def gcc_phat(x_i, x_j, fs, tau):
     # 要看是否对应上了
     P = fft(x_i) * fft(x_j).conj()
     A = P / (np.abs(P)+np.finfo(np.float32).eps)
+
     # 为之后使用窗口做准备
     A = A.reshape(1, -1)
 
     num_bins = A.shape[1]
-    # k = np.linspace(0, fs / 2, num_bins)
-    # exp_part = np.outer(k, 2j * np.pi * tau)
-    # R = np.dot(A, np.exp(exp_part))
     k = np.arange(num_bins)
+    t1 = time.time()
     exp_part = np.outer(k, 2j * np.pi * tau * fs/num_bins)
+    t2 = time.time()
+    print('ifft1 time consuption: ', t2 - t1)
+    t1 = time.time()
     R = np.dot(A, np.exp(exp_part)) / num_bins
+    t2 = time.time()
+    print('ifft2 time consuption: ', t2 - t1)
     return np.abs(R)
-
-def srp_phat(raw_signal, mic_array_pos, c, fs, level=1):
+def srp_phat(raw_signal, mic_array_pos, search_grid, c, fs):
     assert raw_signal.shape[0] == mic_array_pos.shape[0]
     mic_num = mic_array_pos.shape[0]
     # grid, _ = create_spherical_grids(level)
-    grid: np.ndarray = np.load(rf'grid/{level}.npz')['grid']
     # print(grid.shape)
-    E_d = np.zeros((1, grid.shape[0]))  # (num_frames, num_points)
+    E_d = np.zeros((1, search_grid.shape[0]))  # (num_frames, num_points), 之后要改
     for i in range(mic_num):
         for j in range(i + 1, mic_num):
             # tau is given in second, 这个也可以提前计算
-            tau = get_steering_vector(mic_array_pos[i], mic_array_pos[j], c, grid)
+            tau = get_steering_vector(mic_array_pos[i], mic_array_pos[j], c, search_grid)
+            t1 = time.time()
+            R_ij = gcc_phat(raw_signal[i], raw_signal[j], fs, tau)
+            t2 = time.time()
+            E_d += R_ij
+            print('each pair time consuption: ', t2 - t1)
+    return E_d
+# 貌似没有改进
+def srp_phat_previous_tau(raw_signal, mic_array_pos, search_grid, pairs_tau, fs):
+    assert raw_signal.shape[0] == mic_array_pos.shape[0]
+    mic_num = mic_array_pos.shape[0]
+    # grid, _ = create_spherical_grids(level)
+    # print(grid.shape)
+    E_d = np.zeros((1, search_grid.shape[0]))  # (num_frames, num_points), 之后要改
+    for i in range(mic_num):
+        for j in range(i + 1, mic_num):
+            # tau is given in second, 这个也可以提前计算
+            tau = pairs_tau[str(i) + str(j)]
             R_ij = gcc_phat(raw_signal[i], raw_signal[j], fs, tau)
             E_d += R_ij
-    sdevc = grid[np.argmax(E_d, axis=1)]  # source direction vector
-    # print(sdevc)
-    print('angle of  max val: ', np.rad2deg(vec2theta(sdevc)))
-    # plot_angspect(E_d[0], grid)
     return E_d
 
 
+# 尝试用矩阵加速。没用，矩阵太大了
+def calculate_stack_fft_and_pairs_tau(raw_signals, mic_array_pos, search_grid, c):
+    mic_num = mic_array_pos.shape[0]
+    pair_tau = []
+    pair_fft = []
+    for i in range(mic_num):
+        for j in range(i + 1, mic_num):
+            tau = get_steering_vector(mic_array_pos[i], mic_array_pos[j], c, search_grid)
+            pair_tau.append(tau)
+            P = fft(raw_signals[i]) * fft(raw_signals[j]).conj()
+            A = P / (np.abs(P) + np.finfo(np.float32).eps)
+            # 为之后使用窗口做准备
+            A = A.reshape(1, -1)
+            pair_fft.append(A)
+    h_stack_fft = np.hstack([pf for pf in pair_fft])
+    return np.array(pair_tau), h_stack_fft
+def gcc_phat_m(stack_fft, fs, pair_tau):
+    """
+    :param x_i: real signal of mic i
+    :param x_j: real signal of mic j
+    :param fs: sample rate
+    :param search_grid: grid for search, each point in grid is a 3-D vector
+    :return: np array, shape = (n_frames, num_of_search_grid)
+    """
+
+    num_bins = stack_fft.shape[1] / pair_tau.shape[0]
+    k = np.arange(num_bins)
+    t1 = time.time()
+    exp_part = np.outer(k, 2j * np.pi * pair_tau[0] * fs/num_bins)
+    for i in range(1, pair_tau.shape[0]):
+        exp_part_temp = np.outer(k, 2j * np.pi * pair_tau[i] * fs / num_bins)
+        exp_part = np.vstack((exp_part, exp_part_temp))
+    t2 = time.time()
+    print('ifft1 time consuption: ', t2 - t1)
+    t1 = time.time()
+    R = np.dot(stack_fft, np.exp(exp_part)) / (num_bins * pair_tau.shape[0])
+    t2 = time.time()
+    print('ifft2 time consuption: ', t2 - t1)
+    return np.abs(R)
+def srp_phat_m(raw_signal, mic_array_pos, stack_raw_signal_fft, pairs_tau, fs):
+    assert raw_signal.shape[0] == mic_array_pos.shape[0]
+    mic_num = mic_array_pos.shape[0]
+    # grid, _ = create_spherical_grids(level)
+    # print(grid.shape)
+    t1 = time.time()
+    E_d = gcc_phat_m(stack_raw_signal_fft, fs, pairs_tau)
+    t2 = time.time()
+    return E_d
+
 def split_frame():
     c = 343
-    frame_count = 256
-    data, fs = load_audio_data(r'D:\projects\pyprojects\gesturerecord\location\0\0.wav', 'wav')
+    frame_count = 2048
+    data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\0.wav', 'wav')
     skip_time = int(fs * 1)
     data = data[skip_time:, :-1].T
+    # search unit circle
+    level = 4
+    grid: np.ndarray = np.load(rf'grid/{level}.npz')['grid']
+    # mic mem pos
+    pos = cons_uca(0.043)
+    # calculate tau previously
+    pairs_tau = calculate_pairs_tau(pos, grid, c)
     for i in range(0, data.shape[1], frame_count):
         data_seg = data[:, i:i+frame_count]
         # 噪声不做,随便写的
-        if np.max(abs(fft(data_seg[0] / len(data_seg[0])))) < 10:
+        if np.max(abs(fft(data_seg[0] / len(data_seg[0])))) < 1:
             continue
         print('time: ', (skip_time + i)/fs)
-        pos = cons_uca(0.043)
-        E = srp_phat(data_seg, pos, c, fs, level=4)
+        t1 = time.time()
+        E = srp_phat(data_seg, pos, grid, c, fs)
+        # E = srp_phat_previous_tau(data_seg, pos, grid, pairs_tau, fs)
+        t2 = time.time()
+        print('srp_phat time consumption: ', t2-t1)
+        sdevc = grid[np.argmax(E, axis=1)]  # source direction vector
+        # print(sdevc)
+        print('angle of  max val: ', np.rad2deg(vec2theta(sdevc)))
+        print('='*50)
+        # plot_angspect(E_d[0], grid)
+
+# 失败
+def split_frame_m():
+    c = 343
+    frame_count = 2048
+    data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\0.wav', 'wav')
+    skip_time = int(fs * 1)
+    data = data[skip_time:, :-1].T
+    # search unit circle
+    level = 4
+    grid: np.ndarray = np.load(rf'grid/{level}.npz')['grid']
+    # mic mem pos
+    pos = cons_uca(0.043)
+    for i in range(0, data.shape[1], frame_count):
+        data_seg = data[:, i:i+frame_count]
+        # 噪声不做,随便写的
+        if np.max(abs(fft(data_seg[0] / len(data_seg[0])))) < 1:
+            continue
+        print('time: ', (skip_time + i)/fs)
+        t1 = time.time()
+        pair_tau, stack_fft = calculate_stack_fft_and_pairs_tau(data_seg, pos, grid, c)
+        t2 = time.time()
+        print('previous calculation time consumption: ', t2-t1)
+        t1 = time.time()
+        E = srp_phat_m(data_seg, pos, stack_fft, pair_tau, fs)
+        # E = srp_phat_previous_tau(data_seg, pos, grid, pairs_tau, fs)
+        t2 = time.time()
+        print('srp_phat time consumption: ', t2-t1)
+        sdevc = grid[np.argmax(E, axis=1)]  # source direction vector
+        # print(sdevc)
+        print('angle of  max val: ', np.rad2deg(vec2theta(sdevc)))
+        print('='*50)
+        # plot_angspect(E_d[0], grid)
 
 
 def real_time_run():
-    pos = cons_uca(0.043)
     frame_count = 2048
     channels = 8
     c = 343
     fs = 48000
+    # search unit circle
+    level = 4
+    grid: np.ndarray = np.load(rf'grid/{level}.npz')['grid']
+    # mic mem pos
+    pos = cons_uca(0.043)
     # socket
     address = ('127.0.0.1', 31500)
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -266,7 +391,9 @@ def real_time_run():
         # 噪声不做,随便写的
         if np.max(abs(fft(data[0] / len(data[0])))) < 10:
             continue
-        E = srp_phat(data, pos, c, fs, level=4)
+        E = srp_phat(data, pos, grid, c, fs)
+        sdevc = grid[np.argmax(E, axis=1)]  # source direction vector
+        print('angle of  max val: ', np.rad2deg(vec2theta(sdevc)))
 
 
 if __name__ == '__main__':
@@ -289,4 +416,5 @@ if __name__ == '__main__':
     # E = srp_phat(data, pos, c, fs, level=4)
 
     split_frame()
+    # split_frame_m()
     # real_time_run()

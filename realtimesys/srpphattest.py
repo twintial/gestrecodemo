@@ -31,7 +31,6 @@ def gcc_phat_search(x_i, x_j, fs, tau):
     :param x_i: real signal of mic i
     :param x_j: real signal of mic j
     :param fs: sample rate
-    :param search_grid: grid for search, each point in grid is a 3-D vector
     :return: np array, shape = (n_frames, num_of_search_grid)
     """
     # 要看是否对应上了
