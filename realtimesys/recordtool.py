@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 class Record:
     def __init__(self, address):
+        self.play = False  # 是否有播放
         self.wav_file = None
 
         self.signal = None
@@ -138,6 +139,7 @@ class Record:
 
         if signal is not None:
             self.play_signal(signal)
+            self.play = True
         self.record()
 
     def stop(self):
