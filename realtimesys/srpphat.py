@@ -198,7 +198,6 @@ def gcc_phat(x_i, x_j, fs, tau):
     :param search_grid: grid for search, each point in grid is a 3-D vector
     :return: np array, shape = (n_frames, num_of_search_grid)
     """
-    # 要看是否对应上了
     P = fft(x_i) * fft(x_j).conj()
     A = P / (np.abs(P)+np.finfo(np.float32).eps)
 
@@ -430,6 +429,7 @@ def real_time_run():
 
 
 if __name__ == '__main__':
+    # genrate grid
     # r = 0
     # p, ta = create_spherical_grids(r=r)
     # plot_grid(p, ta)
