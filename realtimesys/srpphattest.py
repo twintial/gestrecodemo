@@ -85,7 +85,7 @@ def denoise_fft(target_fft, noise_fft):
     normalized_signal_fft_with_fft(doppler_fft_abs, 'doppler_fft')
     plt.show()
 
-    doppler_fft = doppler_fft_abs * np.exp(1j* phase)
+    doppler_fft = doppler_fft_abs * np.exp(1j*phase)
     return doppler_fft
 
 def gcc_phat_search(x_i, x_j, fs, tau):
@@ -214,7 +214,7 @@ def fft_denoise_test():
 
     t_fs_n = 40000
     noise_data = data_filter[:, t_fs_n:t_fs_n+frame_len]
-    t_fs_t = 48000 * 5
+    t_fs_t = 48000 * 5 + 1000
     test_data = data_filter[:, t_fs_t:t_fs_t+frame_len]
     # denoise_fft(fft(test_data)/frame_len, fft(noise_data)/frame_len)
 
