@@ -335,13 +335,13 @@ def srp_phat_m(raw_signal, mic_array_pos, stack_raw_signal_fft, pairs_tau, fs):
 
 def split_frame():
     c = 343
-    frame_count = 128
-    data, fs = load_audio_data(r'D:\projects\pyprojects\gesturerecord\location\1khz\0.wav', 'wav')
+    frame_count = 512
+    data, fs = load_audio_data(r'D:\projects\pyprojects\gesturerecord\location\sound\0.wav', 'wav')
     skip_time = int(fs * 1)
     data = data[skip_time:, :-1].T
     # search unit circle
-    level = 3
-    grid: np.ndarray = np.load(rf'grid/{level}.npz')['grid']
+    level = 4
+    grid: np.ndarray = np.load(rf'grid/{level}_north.npz')['grid']
     # mic mem pos
     pos = cons_uca(0.043)
     # calculate tau previously
@@ -398,15 +398,15 @@ def split_frame_m():
         print('='*50)
         # plot_angspect(E_d[0], grid)
 
-
-def real_time_run():
+# 不清楚式超声波不行还是正弦波不行，多半是后者
+def real_time_run_audible_voice():
     frame_count = 2048
     channels = 8
     c = 343
     fs = 48000
     # search unit circle
     level = 4
-    grid: np.ndarray = np.load(rf'grid/{level}.npz')['grid']
+    grid: np.ndarray = np.load(rf'grid/{level}_north.npz')['grid']
     # mic mem pos
     pos = cons_uca(0.043)
     # socket
@@ -419,21 +419,25 @@ def real_time_run():
             break
         data = np.frombuffer(rdata, dtype=np.int16)
         data = data.reshape(-1, channels).T
-        data = data[:7, :]
+        data = data[:7, 512:-512]
         # 噪声不做,随便写的
         if np.max(abs(fft(data[0] / len(data[0])))) < 10:
             continue
+        print("hear voice")
         E = srp_phat(data, pos, grid, c, fs)
         sdevc = grid[np.argmax(E, axis=1)]  # source direction vector
         print('angle of  max val: ', np.rad2deg(vec2theta(sdevc)))
+        print("="*50)
 
 
 if __name__ == '__main__':
     # genrate grid
-    # r = 0
+    # r = 3
     # p, ta = create_spherical_grids(r=r)
+    # p = p[p[:, 2] >= 0]
+    # print(p.shape)
     # plot_grid(p, ta)
-    # np.savez_compressed(rf'grid/{r}.npz', grid=p)
+    # np.savez_compressed(rf'grid/{r}_north.npz', grid=p)
     pass
     # data, fs = load_audio_data(r'D:\projects\pyprojects\soundphase\calib\0\mic2.wav', 'wav')
     # # data = data[48000 * 1 + 44000:48000+44000+1024, :-1].T
@@ -448,6 +452,6 @@ if __name__ == '__main__':
     # c = 343
     # E = srp_phat(data, pos, c, fs, level=4)
 
-    split_frame()
+    # split_frame()
     # split_frame_m()
-    # real_time_run()
+    real_time_run()
