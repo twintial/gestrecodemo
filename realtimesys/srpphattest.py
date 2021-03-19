@@ -83,8 +83,13 @@ def denoise_fft(target_fft, noise_fft):
 
     sorted_index = np.argsort(f2)[::-1]
     bins = f2[sorted_index]
+    print(np.sum(f2 > 2000))
     noise_bins_num = 8
     doppler_fft_abs[sorted_index[:noise_bins_num]] = 0
+
+    sorted_index1 = np.argsort(f1)[::-1]
+    bins1 = f1[sorted_index1]
+    print(np.sum(f1 > 2000))
 
     # plt.plot(doppler_fft_abs)
     # plt.show()
@@ -95,10 +100,10 @@ def denoise_fft(target_fft, noise_fft):
     #     normalized_signal_fft_with_fft(doppler_fft_abs[i], 'doppler_fft')
     #     plt.show()
 
-    # normalized_signal_fft_with_fft(f1, 'target_fft')
-    # normalized_signal_fft_with_fft(f2, 'noise_fft')
-    # normalized_signal_fft_with_fft(doppler_fft_abs, 'doppler_fft')
-    # plt.show()
+    normalized_signal_fft_with_fft(f1 / len(doppler_fft_abs), 'target_fft')
+    normalized_signal_fft_with_fft(f2 / len(doppler_fft_abs), 'noise_fft')
+    normalized_signal_fft_with_fft(doppler_fft_abs / len(doppler_fft_abs), 'doppler_fft')
+    plt.show()
 
     doppler_fft = doppler_fft_abs * np.exp(1j*phase)
     return doppler_fft
@@ -304,7 +309,7 @@ def srp_fft_denoise_test():
     mic_array_pos = cons_uca(0.043)
     c = 343
     level = 4
-    grid = np.load(rf'grid/{level}.npz')['grid']
+    grid = np.load(rf'grid/{level}_north.npz')['grid']
     noise_fft = fft(noise_data * window)
     E = srp_phat_denoise(test_data, mic_array_pos, grid, c, fs, noise_fft, window)
     sdevc = grid[np.argmax(E, axis=1)]  # source direction vector

@@ -12,6 +12,20 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # 空间三维画图
 
 from audiotools.util import load_audio_data
+from dsptools.filter import butter_bandpass_filter
+def normalized_signal_fft_with_fft(fft, title, fs=48e3, figure=True, xlim=(19e3, 21e3)):
+    N = len(fft)
+    y_signle: np.ndarray = fft[:int(np.round(N / 2))] * 2
+    x = fftfreq(N) * fs
+    x = x[x >= 0]
+    if figure:
+        plt.figure()
+        plt.plot(x, y_signle)
+        plt.xlim(xlim)
+        plt.xlabel('Frequency (Hz)')
+        plt.ylabel('power')
+        plt.title(title)
+    return x, y_signle
 
 
 def cons_uca(r):
@@ -429,6 +443,124 @@ def real_time_run_audible_voice():
         print('angle of  max val: ', np.rad2deg(vec2theta(sdevc)))
         print("="*50)
 
+def denoise_fft(target_fft, noise_fft):
+    # f1 = power2db(np.abs(target_fft))
+    # f2 = power2db(np.abs(noise_fft))
+    phase = np.angle(target_fft)
+    f1 = np.abs(target_fft)
+    f2 = np.abs(noise_fft)
+
+    # f1 = target_fft
+    # f2 = noise_fft
+    assert f1.shape == f2.shape
+    doppler_fft_abs = f1 - f2
+
+    doppler_fft_abs[doppler_fft_abs < 0] = 0
+
+    sorted_index = np.argsort(f2)[:, ::-1]
+    # bins = f2[sorted_index]
+    noise_bins_num = 8
+    for i in range(target_fft.shape[0]):
+        doppler_fft_abs[i, sorted_index[i, :noise_bins_num]] = 0
+
+    # plt.plot(doppler_fft_abs)
+    # plt.show()
+
+    # for i in range(doppler_fft_abs.shape[0]):
+    #     normalized_signal_fft_with_fft(f1[0], 'target_fft')
+    #     normalized_signal_fft_with_fft(f2[0], 'noise_fft')
+    #     normalized_signal_fft_with_fft(doppler_fft_abs[i], 'doppler_fft')
+    #     plt.show()
+    #
+    # normalized_signal_fft_with_fft(f1 / len(doppler_fft_abs), 'target_fft')
+    # normalized_signal_fft_with_fft(f2 / len(doppler_fft_abs), 'noise_fft')
+
+    # if np.mean(np.max(doppler_fft_abs, axis=1)) > 1:
+    #     normalized_signal_fft_with_fft(doppler_fft_abs[0] / len(doppler_fft_abs), 'doppler_fft')
+    #     plt.show()
+
+    doppler_fft = doppler_fft_abs * np.exp(1j*phase)
+    return doppler_fft
+def gcc_phat_search_fft_denoise(denoised_fft_xi, denoised_fft_xj, fs, tau):
+    P = denoised_fft_xi * denoised_fft_xj.conj()
+    A = P / (np.abs(P) + np.finfo(np.float32).eps)
+    # 为之后使用窗口做准备
+    A = A.reshape(1, -1)
+
+    num_bins = A.shape[1]
+    # k = np.linspace(0, fs / 2, num_bins)
+    # exp_part = np.outer(k, 2j * np.pi * tau)
+    # R = np.dot(A, np.exp(exp_part))
+    k = np.arange(num_bins)
+    exp_part = np.outer(k, 2j * np.pi * tau * fs / num_bins)
+    R = np.dot(A, np.exp(exp_part)) / num_bins
+    return np.abs(R)
+def srp_phat_denoise(doppler_fft, mic_array_pos, search_grid, c, fs):
+    assert doppler_fft.shape[0] == mic_array_pos.shape[0]
+    mic_num = mic_array_pos.shape[0]
+    # grid, _ = create_spherical_grids(level)
+    # print(grid.shape)
+    E_d = np.zeros((1, search_grid.shape[0]))  # (num_frames, num_points), 之后要改
+    for i in range(mic_num):
+        for j in range(i + 1, mic_num):
+            # tau is given in second, 这个也可以提前计算
+            tau = get_steering_vector(mic_array_pos[i], mic_array_pos[j], c, search_grid)
+            # t1 = time.time()
+            R_ij = gcc_phat_search_fft_denoise(doppler_fft[i], doppler_fft[j], fs, tau)
+            # t2 = time.time()
+            E_d += R_ij
+            # print('each pair time consuption: ', t2 - t1)
+    return E_d
+# 失败
+def real_time_run_reflection_ultrasonic_sound():
+    frame_count = 2048
+    channels = 8
+    c = 343
+    fs = 48000
+    # search unit circle
+    level = 4
+    grid: np.ndarray = np.load(rf'grid/{level}_north.npz')['grid']
+    # mic mem pos
+    pos = cons_uca(0.043)
+    # noise
+    noise_fft = None
+    # fft window
+    window = np.hanning(2048)
+    # socket
+    address = ('127.0.0.1', 31500)
+    tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcp_socket.connect(address)
+    while True:
+        rdata = tcp_socket.recv(frame_count * channels * 2)
+        if len(rdata) == 0:
+            break
+        data = np.frombuffer(rdata, dtype=np.int16)
+        data = data.reshape(-1, channels).T
+        data = data[:7, :]
+        data = butter_bandpass_filter(data, 19e3, 21e3)
+        # if noise_fft is None:
+        #     noise_fft = fft(data * window)
+        #     continue
+        data_fft = fft(data * window)
+        # 噪声不做,随便写的
+        data_fft_abs = np.abs(data_fft)
+        # plt.plot(data_fft_abs[0])
+        # plt.show()
+        non_noise_bins = data_fft_abs > 2000
+        # print(np.mean(np.sum(non_noise_bins, axis=1)))
+        if np.mean(np.sum(non_noise_bins, axis=1)) > 6:
+            if noise_fft is None:
+                noise_fft = fft(data * window)
+                continue
+        if np.mean(np.sum(non_noise_bins, axis=1)) < 10:
+            # noise_fft = data_fft
+            continue
+        doppler_fft = denoise_fft(data_fft, noise_fft)
+        print("hear voice, fft amplitude: ", np.mean(np.max(doppler_fft, axis=1)))
+        E = srp_phat_denoise(doppler_fft, pos, grid, c, fs)
+        sdevc = grid[np.argmax(E, axis=1)]  # source direction vector
+        print('angle of  max val: ', np.rad2deg(vec2theta(sdevc)))
+        print("="*50)
 
 if __name__ == '__main__':
     # genrate grid
@@ -454,4 +586,5 @@ if __name__ == '__main__':
 
     # split_frame()
     # split_frame_m()
-    real_time_run()
+    # real_time_run_audible_voice()
+    real_time_run_reflection_ultrasonic_sound()
