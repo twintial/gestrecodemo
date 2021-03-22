@@ -57,8 +57,13 @@ def ifft1(a):
     return f
 
 def gcc_phat(a, b):
-    f_s1 = fft(a)
-    f_s2 = fft(b)
+    w = np.hanning(len(a))
+    # w = np.ones(len(a))
+    f_s1 = fft(a * w)
+    normalized_signal_fft_with_fft(np.abs(f_s1), 'f_s1',xlim=(0,20e3))
+    plt.figure()
+    f_s2 = fft(b * w)
+    plt.plot(np.abs(f_s2))
     f_s2c = np.conj(f_s2)
     f_s = f_s1 * f_s2c
     denom = np.abs(f_s) + np.finfo(np.float32).eps
@@ -80,16 +85,12 @@ def denoise_fft(target_fft, noise_fft):
 
     doppler_fft_abs[doppler_fft_abs < 0] = 0
 
-
-    sorted_index = np.argsort(f2)[::-1]
-    bins = f2[sorted_index]
-    print(np.sum(f2 > 2000))
-    noise_bins_num = 8
-    doppler_fft_abs[sorted_index[:noise_bins_num]] = 0
-
-    sorted_index1 = np.argsort(f1)[::-1]
-    bins1 = f1[sorted_index1]
-    print(np.sum(f1 > 2000))
+    # 完全去除noise，但是感觉有问题
+    # sorted_index = np.argsort(f2)[::-1]
+    # bins = f2[sorted_index]
+    # print(np.sum(f2 > 2000))
+    # noise_bins_num = 4
+    # doppler_fft_abs[sorted_index[:noise_bins_num]] = 0
 
     # plt.plot(doppler_fft_abs)
     # plt.show()
@@ -115,9 +116,13 @@ def gcc_phat_search(x_i, x_j, fs, tau):
     :param fs: sample rate
     :return: np array, shape = (n_frames, num_of_search_grid)
     """
+
+    w = np.hanning(len(x_j))
+
+
     # 这里对fft去噪声
-    fft_xi = fft(x_i)
-    fft_xj = fft(x_j)
+    fft_xi = fft(x_i * w)
+    fft_xj = fft(x_j * w)
 
     P = fft_xi * fft_xj.conj()
     A = P / (np.abs(P)+np.finfo(np.float32).eps)
@@ -184,7 +189,7 @@ def compare():
     LENG = 512
     data, fs = load_audio_data(r'D:\projects\pyprojects\gesturerecord\location\1khz\0.wav', 'wav')
     t = 2
-    data = data[fs * t:fs * t + LENG, :-1].T
+    data = data[int(fs * t):int(fs * t) + LENG, :-1].T
     #
     # for i, d in enumerate(data):
     #     plt.subplot(4, 2, i + 1)
@@ -318,8 +323,9 @@ def srp_fft_denoise_test():
     print('=' * 50)
 
 if __name__ == '__main__':
+    compare()
     # fft_denoise_test()
-    srp_fft_denoise_test()
+    # srp_fft_denoise_test()
     # hanning_window = np.hanning(2048)
     # plt.plot(hanning_window)
     # plt.show()

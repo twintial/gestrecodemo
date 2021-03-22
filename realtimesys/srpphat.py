@@ -558,6 +558,12 @@ def real_time_run_reflection_ultrasonic_sound():
         doppler_fft = denoise_fft(data_fft, noise_fft)
         print("hear voice, fft amplitude: ", np.mean(np.max(doppler_fft, axis=1)))
         E = srp_phat_denoise(doppler_fft, pos, grid, c, fs)
+        sorted_i_E = np.argsort(E)[:, ::-1]
+
+        n_max = grid[sorted_i_E[0]]
+
+        all_vector = np.rad2deg(vec2theta(n_max))
+
         sdevc = grid[np.argmax(E, axis=1)]  # source direction vector
         print('angle of  max val: ', np.rad2deg(vec2theta(sdevc)))
         print("="*50)
@@ -584,7 +590,7 @@ if __name__ == '__main__':
     # c = 343
     # E = srp_phat(data, pos, c, fs, level=4)
 
-    # split_frame()
+    split_frame()
     # split_frame_m()
     # real_time_run_audible_voice()
-    real_time_run_reflection_ultrasonic_sound()
+    # real_time_run_reflection_ultrasonic_sound()
