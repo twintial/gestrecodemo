@@ -212,7 +212,9 @@ def gcc_phat(x_i, x_j, fs, tau):
     :param search_grid: grid for search, each point in grid is a 3-D vector
     :return: np array, shape = (n_frames, num_of_search_grid)
     """
-    P = fft(x_i) * fft(x_j).conj()
+    w = np.hanning(len(x_j))
+    # w = np.ones(len(x_j))
+    P = fft(x_i * w) * fft(x_j * w).conj()
     A = P / (np.abs(P)+np.finfo(np.float32).eps)
 
     # 为之后使用窗口做准备
@@ -349,12 +351,12 @@ def srp_phat_m(raw_signal, mic_array_pos, stack_raw_signal_fft, pairs_tau, fs):
 
 def split_frame():
     c = 343
-    frame_count = 512
+    frame_count = 1024
     data, fs = load_audio_data(r'D:\projects\pyprojects\gesturerecord\location\sound\0.wav', 'wav')
     skip_time = int(fs * 1)
     data = data[skip_time:, :-1].T
     # search unit circle
-    level = 4
+    level = 3
     grid: np.ndarray = np.load(rf'grid/{level}_north.npz')['grid']
     # mic mem pos
     pos = cons_uca(0.043)

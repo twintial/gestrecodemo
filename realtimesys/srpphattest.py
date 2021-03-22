@@ -187,7 +187,7 @@ def srp_phat_denoise(raw_signal, mic_array_pos, search_grid, c, fs, noise_fft, w
 # 用ifft和用search_grid做对比
 def compare():
     LENG = 512
-    data, fs = load_audio_data(r'D:\projects\pyprojects\gesturerecord\location\1khz\0.wav', 'wav')
+    data, fs = load_audio_data(r'D:\projects\pyprojects\gesturerecord\location\19khz\0.wav', 'wav')
     t = 2
     data = data[int(fs * t):int(fs * t) + LENG, :-1].T
     #
