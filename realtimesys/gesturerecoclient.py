@@ -20,7 +20,7 @@ def gesture_reco_detection_multithread(gesture_frames):
     '''
     可以做到config中去
     '''
-    N_CHANNELS = 2
+    N_CHANNELS = 7
     DELAY_TIME = 1
     NUM_OF_FREQ = 8
     F0 = 17000
@@ -74,8 +74,8 @@ def gesture_reco_detection_multithread(gesture_frames):
     merged_u_p = np.array(unwrapped_phase_list).reshape((NUM_OF_FREQ * N_CHANNELS * 2, -1))
 
     # 仿造（之后删除）
-    merged_u_p = np.tile(merged_u_p, (3,1))
-    merged_u_p = np.vstack((merged_u_p, merged_u_p[:16, :]))
+    # merged_u_p = np.tile(merged_u_p, (3,1))
+    # merged_u_p = np.vstack((merged_u_p, merged_u_p[:16, :]))
 
     mean_len = 777  # 之后要改
     # 这里补0的策略可能要改
@@ -99,7 +99,7 @@ def gesture_reco_detection_multithread(gesture_frames):
     print(f"time of prediction:{te_3-ts_3}") # 0.05
 
 if __name__ == '__main__':
-    channels = 2
+    channels = 8
     frame_count = 2048
     frames_int = None
 

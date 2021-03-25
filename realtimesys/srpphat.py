@@ -352,7 +352,7 @@ def srp_phat_m(raw_signal, mic_array_pos, stack_raw_signal_fft, pairs_tau, fs):
 def split_frame():
     c = 343
     frame_count = 1024
-    data, fs = load_audio_data(r'D:\projects\pyprojects\gesturerecord\location\sound\0.wav', 'wav')
+    data, fs = load_audio_data(r'D:\projects\pyprojects\gesturerecord\location\1khz\0.wav', 'wav')
     skip_time = int(fs * 1)
     data = data[skip_time:, :-1].T
     # search unit circle
@@ -592,7 +592,7 @@ if __name__ == '__main__':
     # c = 343
     # E = srp_phat(data, pos, c, fs, level=4)
 
-    split_frame()
+    # split_frame()
     # split_frame_m()
-    # real_time_run_audible_voice()
+    real_time_run_audible_voice()
     # real_time_run_reflection_ultrasonic_sound()

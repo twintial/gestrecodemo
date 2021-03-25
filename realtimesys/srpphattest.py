@@ -119,8 +119,6 @@ def gcc_phat_search(x_i, x_j, fs, tau):
 
     w = np.hanning(len(x_j))
 
-
-    # 这里对fft去噪声
     fft_xi = fft(x_i * w)
     fft_xj = fft(x_j * w)
 
@@ -186,10 +184,12 @@ def srp_phat_denoise(raw_signal, mic_array_pos, search_grid, c, fs, noise_fft, w
 
 # 用ifft和用search_grid做对比
 def compare():
-    LENG = 512
-    data, fs = load_audio_data(r'D:\projects\pyprojects\gesturerecord\location\19khz\0.wav', 'wav')
-    t = 2
-    data = data[int(fs * t):int(fs * t) + LENG, :-1].T
+    LENG = 2048
+    data, fs = load_audio_data(r'D:\projects\pyprojects\gesturerecord\location\sound\0.wav', 'wav')
+    # data = butter_bandpass_filter(data.T, 15e3, 23e3)
+    data = data.T
+    t = 3
+    data = data[:-1, int(fs * t):int(fs * t) + LENG]
     #
     # for i, d in enumerate(data):
     #     plt.subplot(4, 2, i + 1)

@@ -95,7 +95,7 @@ def data_split_and_save(rawdata_path, splitdata_path):
                         x_train=x_train, x_test=x_test, y_train=y_train, y_test=y_test)
     return x_train, x_test, y_train, y_test
 
-
+# siamese
 def pair_data_split_and_save(rawdata_path, splitdata_path):
     dataset = np.load(rawdata_path)
     x = dataset['x']
@@ -128,7 +128,6 @@ def pair_data_split_and_save(rawdata_path, splitdata_path):
     tr_pairs, tr_y = create_pairs(x_train, digit_indices_train)
     te_pairs, te_y = create_pairs(x_test, digit_indices_test)
     return tr_pairs, tr_y, te_pairs, te_y, num_classes
-
 def create_one_shot_pair_data(rawdata_path, splitdata_path, gesture_code, balanced=True):
     dataset = np.load(rawdata_path)
     x = dataset['x']
