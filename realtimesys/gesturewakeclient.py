@@ -17,7 +17,7 @@ F0 = 17000
 STEP = 350
 num_classes = 10
 gesture_code = 6
-model_weight_file = rf'D:/projects/pyprojects/gestrecodemo/nn/models/one_shot_{gesture_code}_weights.h5'
+model_weight_file = rf'D:/projects/pyprojects/gestrecodemo/nn/models/one_shot_zq_{gesture_code}_weights.h5'
 model = SiameseNet(num_classes)
 model.build(input_shape=[(None, 56, 777, 1), (None, 56, 777, 1)])
 model.load_weights(model_weight_file)
@@ -116,13 +116,11 @@ def gesture_wake_detection_multithread(gesture_frames):
     # 归一化，检查一下对不对
     merged_u_p = normalize_max_min(merged_u_p, axis=1)
     input_gesture = merged_u_p.reshape((merged_u_p.shape[0], merged_u_p.shape[1], 1))
-    print(input_gesture.shape)
     input_pairs = get_pair(wake_gesture_data, input_gesture)
-    print(input_pairs.shape)
     y_predict = model.predict([input_pairs[:, 0], input_pairs[:, 1]])
 
     dist = np.mean(y_predict)
-    print(dist)
+    print(f'相似度：{dist}')
     if dist < 0.5:
         print("\033[1;31m wake gesture\033[0m")
     else:
@@ -153,13 +151,13 @@ def run():
 
     phase = [None] * max_frame
     # 画图参数
-    fig, ax = plt.subplots()
-    # ax.set_xlim([0, 48000])
-    # ax.set_ylim([-2, 0])
-    l_phase, = ax.plot(phase)
-    motion_start_line = ax.axvline(0, color='r')
-    motion_stop_line = ax.axvline(0, color='g')
-    plt.pause(0.01)
+    # fig, ax = plt.subplots()
+    # # ax.set_xlim([0, 48000])
+    # # ax.set_ylim([-2, 0])
+    # l_phase, = ax.plot(phase)
+    # motion_start_line = ax.axvline(0, color='r')
+    # motion_stop_line = ax.axvline(0, color='g')
+    # plt.pause(0.01)
 
     # socket
     address = ('127.0.0.1', 31500)
@@ -228,13 +226,13 @@ def run():
                     higher_than_threshold_count = 0
 
             # 画图
-            motion_start_line.set_xdata(motion_start_index)
-            motion_stop_line.set_xdata(motion_stop_index)
-            l_phase.set_ydata(phase)
-            ax.relim()
-            ax.autoscale()
-            ax.figure.canvas.draw()
-            plt.pause(0.001)
+            # motion_start_line.set_xdata(motion_start_index)
+            # motion_stop_line.set_xdata(motion_stop_index)
+            # l_phase.set_ydata(phase)
+            # ax.relim()
+            # ax.autoscale()
+            # ax.figure.canvas.draw()
+            # plt.pause(0.001)
 
             offset += frame_count
             # # 不一定好，暂时先这样

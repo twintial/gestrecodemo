@@ -23,24 +23,24 @@ if __name__ == '__main__':
     # print(b''.join(a))
 
     fs = 48000
-    t = 30
-    A = [1, 1, 1, 1, 1, 1, 1, 1]
-    alpha = 1 / sum(A)
-    y = A[0] * cos_wave(1, 17000, fs, t)
-    for i in range(1, 7):
-        y = y + A[i] * cos_wave(1, 17000 + i * 350, fs, t)
-    signal = alpha * y
-    print(signal.dtype)
+    # t = 300
+    # A = [1, 1, 1, 1, 1, 1, 1, 1]
+    # alpha = 1 / sum(A)
+    # y = A[0] * cos_wave(1, 17000, fs, t)
+    # for i in range(1, 7):
+    #     y = y + A[i] * cos_wave(1, 17000 + i * 350, fs, t)
+    # signal = alpha * y
+    # print(signal.dtype)
 
-    # signal = get_sinusoid(18000, 400, 7, fs, 60)
-    # signal = cos_wave(1, 1e3, fs, 10)
+    # signal = get_sinusoid(18000, 400, 8, fs, 60)
+    signal = cos_wave(1, 20e3, fs, 60)
 
-    # wavfile.write(r'1.wav', fs, signal)
+    wavfile.write(r'20khz.wav', fs, signal)
 
     # 这个方法不知道为什么有问题
-    wf = wave.open(r'sinusoid2.wav', 'wb')
-    wf.setnchannels(1)
-    wf.setsampwidth(4)  # float32
-    wf.setframerate(fs)
-    wf.writeframes(b''.join(signal))
-    wf.close()
+    # wf = wave.open(r'sinusoid2.wav', 'wb')
+    # wf.setnchannels(1)
+    # wf.setsampwidth(4)  # float32
+    # wf.setframerate(fs)
+    # wf.writeframes(b''.join(signal))
+    # wf.close()

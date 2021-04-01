@@ -28,16 +28,11 @@ def gesture_reco_detection_multithread(gesture_frames):
     fs = 48000
     period = 10
 
-    ts_1 = time.time()
-
     unwrapped_phase_list = [None] * NUM_OF_FREQ * 2
 
     def get_phase_and_diff(i):
         fc = F0 + i * STEP
-        ts = time.time()
         data_filter = butter_bandpass_filter(gesture_frames, fc - 150, fc + 150)
-        te = time.time()
-        print(f"time of getting phase:{ts - te}")  # 主要的时间开销， 0.2-0.4s
         I_raw, Q_raw = get_cos_IQ_raw(data_filter, fc, fs)
         # 滤波+下采样
         I = move_average_overlap_filter(I_raw)
@@ -68,8 +63,6 @@ def gesture_reco_detection_multithread(gesture_frames):
         unwrapped_phase_list[2*i+1] = (np.diff(np.diff(unwrapped_phase)))
     with ThreadPoolExecutor(max_workers=8) as pool:
         pool.map(get_phase_and_diff, [i for i in range(NUM_OF_FREQ)])
-    te_1 = time.time()
-    print(f"time of getting phase:{te_1-ts_1}")  # 主要的时间开销， 0.2-0.4s
 
     merged_u_p = np.array(unwrapped_phase_list).reshape((NUM_OF_FREQ * N_CHANNELS * 2, -1))
 
@@ -89,14 +82,10 @@ def gesture_reco_detection_multithread(gesture_frames):
         right_zero_padding = np.zeros((NUM_OF_FREQ * 7 * 2, right_zero_padding_len))
         merged_u_p = np.hstack((left_zero_padding, merged_u_p, right_zero_padding))
 
-    ts_3 = time.time()
     y_predict = model.predict(merged_u_p.reshape((1, merged_u_p.shape[0], merged_u_p.shape[1], 1)))
     label = ['握紧', '张开', '左滑', '右滑', '上滑', '下滑', '前推', '后推', '顺时针转圈', '逆时针转圈']
     print(np.argmax(y_predict[0]))
     print(label[np.argmax(y_predict[0])])
-
-    te_3 = time.time()
-    print(f"time of prediction:{te_3-ts_3}") # 0.05
 
 if __name__ == '__main__':
     channels = 8

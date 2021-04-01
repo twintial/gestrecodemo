@@ -113,7 +113,7 @@ class BaseCnnNet(Model):
         self.dense1 = layers.Dense(128, activation='relu', bias_initializer=tf.initializers.Constant(value=0.1))
         self.dropout = layers.Dropout(0.2)
         # self.dense2 = layers.Dense(num_classes, activation='softmax')
-        self.dense2 = layers.Dense(128, activation='relu')
+        self.dense2 = layers.Dense(64, activation='relu')
 
     def call(self, inputs, training=None, mask=None):
         x = self.conv2d_1(inputs)
@@ -299,8 +299,8 @@ def one_shot_training_general(x_real, x_fake, pre_trained_model_path,save_model_
 
 def one_shot_training_general_main():
     # load real data
-    gesture_code = 6
-    dataset = np.load(TRAINING_PADDING_FILE)
+    gesture_code = 10
+    dataset = np.load(r'D:\实验数据\2021\毕设\siamese\sjj\padding\dataset.npz')
     x = dataset['x']
     x = normalize_max_min(x, axis=2)
 
@@ -310,7 +310,7 @@ def one_shot_training_general_main():
     digit_indices_main = np.where(y == gesture_code)[0]
     x_real = x[digit_indices_main]
     # load fake data
-    dataset_save_file = r'D:\实验数据\2021\毕设\feature\zq\padding\dataset.npz'
+    dataset_save_file = r'D:\实验数据\2021\毕设\siamese\zq\padding\dataset.npz'
     fake_dataset = np.load(dataset_save_file)
     x = fake_dataset['x']
     x = normalize_max_min(x, axis=2)
@@ -322,7 +322,7 @@ def one_shot_training_general_main():
 
 if __name__ == '__main__':
     np.random.seed(1123)
-    # pre_training()
+    pre_training()
     # one_shot_training(0)
     # one_shot_eval(6)
     one_shot_training_general_main()
