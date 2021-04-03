@@ -1,6 +1,6 @@
-# import os
-# os.environ["CUDA_DEVICE_ORDER"] = 'PCI_BUS_ID'
-# os.environ["CUDA_VISIBLE_DEVICES"] = 1
+import os
+os.environ["CUDA_DEVICE_ORDER"] = 'PCI_BUS_ID'
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 import tensorflow as tf
 from tensorflow.keras import Model, layers
 from tensorflow.keras import backend as K
@@ -116,7 +116,6 @@ class BaseCnnNet(Model):
         self.dense1 = layers.Dense(128, activation='relu', bias_initializer=tf.initializers.Constant(value=0.1))
         self.dropout = layers.Dropout(0.2)
         # self.dense2 = layers.Dense(num_classes, activation='softmax')
-        # relu不知道为什么不行
         self.dense2 = layers.Dense(64, activation='softmax')
 
     def call(self, inputs, training=None, mask=None):
@@ -271,9 +270,6 @@ def create_pairs(x_m, x_other, balanced):
 def one_shot_training_general(x_real, x_fake, pre_trained_model_path,save_model_weights_path,balanced=True):
     pairs, labels = create_pairs(x_real, x_fake, balanced=balanced)
     tr_pairs, te_pairs, tr_y, te_y = train_test_split(pairs, labels, train_size=0.8, random_state=1123)
-    one_shot(tr_pairs, te_pairs, tr_y, te_y, pre_trained_model_path, save_model_weights_path)
-
-def one_shot(tr_pairs, te_pairs, tr_y, te_y, pre_trained_model_path, save_model_weights_path):
     model = SiameseNet(10)
     model.build(input_shape=[(None, 56, 1400, 1), (None, 56, 1400, 1)])
     model.load_weights(pre_trained_model_path)
@@ -307,7 +303,7 @@ def one_shot(tr_pairs, te_pairs, tr_y, te_y, pre_trained_model_path, save_model_
 def one_shot_training_general_main():
     # load real data
     gesture_code = 10
-    dataset = np.load(r'D:\实验数据\2021\毕设\siamese\sjj\padding\dataset.npz')
+    dataset = np.load(r'../data/siamese/sjj/10/padding/dataset.npz')
     x = dataset['x']
     x = normalize_max_min(x, axis=2)
 
@@ -317,7 +313,7 @@ def one_shot_training_general_main():
     digit_indices_main = np.where(y == gesture_code)[0]
     x_real = x[digit_indices_main]
     # load fake data
-    dataset_save_file = r'D:\实验数据\2021\毕设\siamese\zq\padding\dataset.npz'
+    dataset_save_file = r'../data/siamese/zq/10/padding/dataset.npz'
     fake_dataset = np.load(dataset_save_file)
     x = fake_dataset['x']
     x = normalize_max_min(x, axis=2)
@@ -325,58 +321,6 @@ def one_shot_training_general_main():
     x_fake = x
     save_model_path = rf'models/one_shot_zq_{gesture_code}_weights.h5'
     one_shot_training_general(x_real, x_fake, weights_path, save_model_path)
-def one_shot_training_general_main_with_train_test():
-    # load train real data
-    gesture_code = 10
-    dataset = np.load(r'D:\实验数据\2021\毕设\siamese\sjj\10\padding\dataset.npz')
-    x = dataset['x']
-    x = normalize_max_min(x, axis=2)
-
-    x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
-    print(x.shape)
-    x_train_real = x
-    # load train fake data
-    dataset_save_file = r'D:\实验数据\2021\毕设\siamese\zq\10\padding\dataset.npz'
-    fake_dataset = np.load(dataset_save_file)
-    x = fake_dataset['x']
-    x = normalize_max_min(x, axis=2)
-    x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
-    x_train_fake = x
-
-
-    # load test real data
-    gesture_code = 10
-    dataset = np.load(r'D:\实验数据\2021\毕设\siamese\sjj\10_2\padding\dataset.npz')
-    x = dataset['x']
-    x = normalize_max_min(x, axis=2)
-
-    x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
-    print(x.shape)
-    x_test_real = x
-    # load test fake data
-    dataset_save_file = r'D:\实验数据\2021\毕设\siamese\zq\10_2\padding\dataset.npz'
-    fake_dataset = np.load(dataset_save_file)
-    x = fake_dataset['x']
-    x = normalize_max_min(x, axis=2)
-    x = x.reshape((x.shape[0], x.shape[1], x.shape[2], 1))
-    x_test_fake = x
-
-    train_pairs, train_labels = create_pairs(x_train_real, x_train_fake, balanced=True)
-    print(train_pairs.shape)
-    test_pairs, test_labels = create_pairs(x_test_real, x_test_fake, balanced=False)
-    print(test_pairs.shape)
-    save_model_path = rf'models/one_shot_zq_{gesture_code}_weights.h5'
-
-    random_indice = np.random.permutation(len(train_pairs))
-    train_pairs = train_pairs[random_indice]
-    train_labels = train_labels[random_indice]
-
-    random_indice = np.random.permutation(len(test_pairs))
-    test_pairs = test_pairs[random_indice]
-    test_labels = test_labels[random_indice]
-
-    one_shot(train_pairs, test_pairs, train_labels, test_labels, weights_path, save_model_path)
-
 
 
 if __name__ == '__main__':
@@ -384,5 +328,4 @@ if __name__ == '__main__':
     # pre_training()
     # one_shot_training(0)
     # one_shot_eval(6)
-    # one_shot_training_general_main()
-    one_shot_training_general_main_with_train_test()
+    one_shot_training_general_main()

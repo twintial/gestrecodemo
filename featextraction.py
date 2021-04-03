@@ -51,7 +51,7 @@ def run():
 
 def customized():
     import matplotlib.pyplot as plt
-    dirs = [r'D:\实验数据\2021\毕设\siamese\zq\10']
+    dirs = [r'D:\实验数据\2021\毕设\siamese\sjj\10_2']
     for index, audio_dir in enumerate(dirs):
         audio_file_names = os.listdir(audio_dir)
         for audio_file_name in audio_file_names:
@@ -59,11 +59,11 @@ def customized():
             if m:
                 code = int(m.group(1))
                 audio_file = os.path.join(audio_dir, audio_file_name)
-                extract_phasedata_from_audio(audio_file, os.path.join(r'D:\实验数据\2021\毕设\siamese\zq\raw', audio_file_name),
+                extract_phasedata_from_audio(audio_file, os.path.join(r'D:\实验数据\2021\毕设\siamese\sjj\10_2\raw', audio_file_name),
                                              audio_type='wav', mic_array=True)
     # 要自己添加label
-    phasedata_save_dir = r'D:\实验数据\2021\毕设\siamese\zq\raw'
-    dataset_save_file = r'D:\实验数据\2021\毕设\siamese\zq\padding\dataset.npz'
+    phasedata_save_dir = r'D:\实验数据\2021\毕设\siamese\sjj\10_2\raw'
+    dataset_save_file = r'D:\实验数据\2021\毕设\siamese\sjj\10_2\padding\dataset.npz'
     NUM_OF_FREQ = 8
     nchannels = 7
     label = 10
@@ -108,5 +108,5 @@ def customized():
     np.savez_compressed(dataset_save_file, x=phasedata_list, y=label_list)
 
 if __name__ == '__main__':
-    run()
-    # customized()
+    # run()
+    customized()
